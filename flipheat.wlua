@@ -24,6 +24,14 @@ local sizes={
   },
 }
 
+local rowcolors={ --left to right/top to bottom
+  {224,112,80},
+  {64,168,64},
+  {232,160,56},
+  {48,144,248},
+  {192,96,224}
+}
+
 --I use 1 loop for control creation,
 --so rows and columns are the same size.
 --So this won't work for non-square fields.
@@ -43,10 +51,6 @@ end
 
 -- Example Map Genration
 
-local function rgbstring(r,g,b)
-  return string.format("%i %i %i",r,g,b)
-end
-
 local function encodergb(r,g,b)
   return cd.EncodeColor(math.floor(r),math.floor(g),math.floor(b))
 end
@@ -55,61 +59,100 @@ function lin(position, zero, one)
   return zero * (1-position) + one * position
 end
 
-local function heatrgb(heat)
-  if heat < 1/3 then --representing the inverval between only a voltorb and a 1
-    return 255, lin(heat*3,0,255), 0
-  elseif heat < 2/3 then --like the interval between a 1 and a 2
-    return lin((heat-1/3)*3,255,0), 255, 0
-  else --like the interval between a 2 and a 3
-    return 0, lin((heat-2/3)*3,255,0), lin((heat-2/3)*3,0,255)
+local probs={}
+--generate example probabilities
+do
+  local rowbonus={25,5,0,0,0}
+  for row=1,rowcols do
+    probs[row]={}
+    for col=1, rowcols do
+      local voltorb, one, two, three =
+        1+rowbonus[col],1+rowbonus[row],
+        1+rowbonus[rowcols-col+1],1+rowbonus[rowcols-row+1]
+      local sum= voltorb+ one+ two+ three
+      probs[row][col]={
+        [0]=voltorb/sum,
+        [1]=one/sum,
+        [2]=two/sum,
+        [3]=three/sum
+      }
+    end
   end
 end
 
---voltorb probability is straight RED
---1 probability is 255 red and 224 green
---2 probability is 255 blue and 128 green
---3 probability is straight BLUE
+local heatrgb; do
+  --voltorb probability is straight RED
+  --1 probability is 255 red and 224 green
+  --2 probability is 255 blue and 128 green
+  --3 probability is straight BLUE
 
---a spot with high VOLTORB and 3 probability would be BRIGHT PURPLE
+  --a spot with high VOLTORB and 3 probability would be BRIGHT PURPLE
+  local probabilityheats={
+    [0]={255,0,0},
+    [1]={255,224,0},
+    [2]={0,128,255},
+    [3]={0,0,255},
+  }
 
-local example= {
-  {{}, {}, {}, {}, {}},
-  {{}, {}, {}, {}, {}},
-  {{}, {}, {}, {}, {}},
-  {{}, {}, {}, {}, {}},
-  {{}, {}, {}, {}, {}},
-}
+  function heatrgb(card)
+    local colors, max, avg = {}, 0, 0
+    for rgbi=1,3 do
+      colors[rgbi]=0
+      for num=0,3 do
+        colors[rgbi]=colors[rgbi]+
+          card[num]*probabilityheats[num][rgbi]
+      end
+      max=math.max(max,colors[rgbi])
+      avg=avg+colors[rgbi]
+    end
+    avg=avg/3
+    local multiplier=math.max(1,1-((max-164)/164))
+    --bring everything up to the max value
+    --(the point where at least red, green, or blue
+    --  is at 255)
+    for rgbi=1,3 do
+      colors[rgbi]=math.min(255,colors[rgbi]*multiplier)
+    end
 
-for row_index, row in ipairs(example) do
-  for col_index, cell in ipairs(row) do
-    local cellheat = (row_index-.5)/10 + (col_index-.5)/10
-    local r,g,b = heatrgb(cellheat)
+    return unpack(colors)
+  end
+end
+
+local cardcolors={}
+for rownum=1, rowcols do
+  local row={}
+  cardcolors[rownum]=row
+  for colnum=1, rowcols do
+    local cell={}
+    row[colnum]=cell
+
+    local cardprobs=probs[rownum][colnum]
+
+    local r,g,b = heatrgb(cardprobs)
     cell.overall = encodergb(r,g,b)
+    cell.subsquares={}
 
-    local function whitehotrgb(heat)
+    local function brightrgb(heat)
       return lin(heat,r,255), lin(heat,g,255), lin(heat,b,255)
     end
 
-    local function peak(bottom, mid, top)
-      local indheat
-      if cellheat < mid then
-        indheat = (bottom-math.max(bottom,cellheat))/(bottom-mid)
-      else
-        indheat = (top-math.min(top, cellheat))/(top-mid)
-      end
-      return encodergb(whitehotrgb(lin(indheat,.25,1)))
+    local function darkrgb(heat)
+      return lin(heat,0,r), lin(heat,0,g), lin(heat,0,b)
     end
 
-    local function edge(low)
-      return encodergb(whitehotrgb(lin(math.max(low,0),.25,1)))
+    local darkr, darkg, darkb=darkrgb(.8)
+    local function dbrgb(heat)
+      return lin(heat,darkr,255), lin(heat,darkg,255), lin(heat,darkb,255)
     end
 
-    cell.individual = {
-      [0]=edge((1/2-cellheat)*2), --voltorb
-      [1]=peak(0, 1/3, 2/3),
-      [2]=peak(1/3, 2/3, 1),
-      [3]=edge((cellheat-2/3)*3),
-    }
+    for i=0,4 do
+      cell.subsquares[i]=encodergb(darkrgb(.8))
+    end
+
+    cell.individual = {}
+    for num=0, 3 do
+      cell.individual[num]=encodergb(dbrgb(cardprobs[num]))
+    end
   end
 end
 
@@ -128,43 +171,62 @@ end
 
 local font="Consolas"
 
-function drawheatmap(can)
-    local width, height = can:GetSize()
+local drawcard; do
+  local scard = sizes.card
+  local third = scard/3
+  local height = canvassize
+
+  function drawcard(can,row,col)
     local resx, resy = can:Pixel2MM(1,1)
     local function fontsize(px)
       return cd.MM2PT * px*resy
     end
 
-    local cellh = sizes.card
-    local cellw = sizes.card
-    local numh = sizes.card/3
-
-    local height = canvassize
-
-    can:Font(font,cd.BOLD,fontsize(numh))
+    local card=cardcolors[row][col]
+    can:Font(font,cd.BOLD,fontsize(third))
     can:MarkType(cd.CIRCLE)
-    can:MarkSize(numh)
-    for row_index, row in ipairs(example) do
+    can:MarkSize(third*4/5)
+    can:TextAlignment(cd.CENTER)
+
+    local right = scard*row
+    local bottom = height-scard*col
+    local left, top= right-scard, bottom+scard
+    can:Foreground(card.overall)
+    can:Box(left, right, bottom, top)
+
+    can:Foreground(card.subsquares[0])
+    can:Box(left, left+third, top, top-third)
+
+    can:Foreground(card.subsquares[1])
+    can:Box(right-third, right, top, top-third)
+
+    can:Foreground(card.subsquares[2])
+    can:Box(left, left+third, bottom+third, bottom)
+
+    can:Foreground(card.subsquares[3])
+    can:Box(right-third, right, bottom+third, bottom)
+
+    can:Foreground(card.subsquares[4])
+    can:Box(left+third, right-third, top-third, bottom+third)
+
+    can:Foreground(card.individual[0])
+    can:Mark(left+third/2, top-third/2)
+
+    can:Foreground(card.individual[1])
+    can:Text(right-third/2,top-third/2,"1")
+
+    can:Foreground(card.individual[2])
+    can:Text(left+third/2,bottom+third/2,"2")
+
+    can:Foreground(card.individual[3])
+    can:Text(right-third/2,bottom+third/2,"3")
+  end
+end
+
+local function drawheatmap(can)
+    for row_index, row in ipairs(cardcolors) do
       for col_index, cell in ipairs(row) do
-          can:Foreground(cell.overall)
-          can:Box(cellw*(row_index-1),cellw*row_index,
-            height-cellh*(col_index-1),height-cellh*col_index)
-
-          can:Foreground(cell.individual[0])
-          can:Mark(cellw*(row_index-1)+numh/2,
-            height-cellh*(col_index-1)-numh/2)
-
-          can:Foreground(cell.individual[1])
-          can:TextAlignment(cd.NORTH_EAST)
-          can:Text(cellw*row_index,height-cellh*(col_index-1),"1")
-
-          can:Foreground(cell.individual[2])
-          can:TextAlignment(cd.SOUTH_WEST)
-          can:Text(cellw*(row_index-1),height-cellh*col_index,"2")
-
-          can:Foreground(cell.individual[3])
-          can:TextAlignment(cd.SOUTH_EAST)
-          can:Text(cellw*row_index,height-cellh*col_index,"3")
+        drawcard(can,col_index, row_index, cell)
       end
     end
 end
