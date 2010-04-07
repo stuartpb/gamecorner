@@ -5,10 +5,17 @@ require 'cdlua'
 require 'iuplua'
 require 'iupluacd'
 
+--grab the dialog's RGB (and convert it to numbers to be safe)
+local bgcolors={
+  string.match(iup.GetGlobal"DLGBGCOLOR",
+    "^(%d+) (%d+) (%d+)$")}
+for _, each in pairs(bgcolors) do each=tonumber(each) end
+
 local sizes={
   card=120,
+  bars=16,
   canvas={
-    gap=0,
+    gap=12,
     margin=0
   },
   margins={
@@ -24,7 +31,16 @@ local sizes={
   },
 }
 
-local rowcolors={ --left to right/top to bottom
+--sample board for first-round active testing
+local example={
+  {1,0,1,1,1},
+  {1,0,0,1,1},
+  {2,0,1,1,1},
+  {0,1,1,1,2},
+  {3,1,2,1,0}
+}
+
+local barcolors={ --left to right/top to bottom
   {224,112,80},
   {64,168,64},
   {232,160,56},
@@ -32,13 +48,6 @@ local rowcolors={ --left to right/top to bottom
   {192,96,224}
 }
 
---I use 1 loop for control creation,
---so rows and columns are the same size.
---So this won't work for non-square fields.
---I'm fairly sure Game Freak isn't going to issue
---a post-release patch that changes the number of
---rows and columns at the Game Corner, and if they do,
---I can live with copying and pasting a few lines.
 local rowcols=5
 
 local function coordstr(width, height)
@@ -49,7 +58,7 @@ local function sqsz(size)
   return coordstr(size,size)
 end
 
--- Example Map Genration
+-- Example Map Generation
 
 local function encodergb(r,g,b)
   return cd.EncodeColor(math.floor(r),math.floor(g),math.floor(b))
@@ -66,27 +75,21 @@ do
   for row=1,rowcols do
     probs[row]={}
     for col=1, rowcols do
-      local voltorb, one, two, three =
+      local top, left, bottom, right =
         1+rowbonus[col],1+rowbonus[row],
         1+rowbonus[rowcols-col+1],1+rowbonus[rowcols-row+1]
-      local sum= voltorb+ one+ two+ three
+      local sum= top + left + bottom + right
       probs[row][col]={
-        [0]=voltorb/sum,
-        [1]=one/sum,
-        [2]=two/sum,
-        [3]=three/sum
+        [0]=top/sum,
+        [1]=left/sum,
+        [2]=right/sum,
+        [3]=bottom/sum
       }
     end
   end
 end
 
 local heatrgb; do
-  --voltorb probability is straight RED
-  --1 probability is 255 red and 224 green
-  --2 probability is 255 blue and 128 green
-  --3 probability is straight BLUE
-
-  --a spot with high VOLTORB and 3 probability would be BRIGHT PURPLE
   local probabilityheats={
     [0]={255,0,0},
     [1]={255,224,0},
@@ -107,9 +110,7 @@ local heatrgb; do
     end
     avg=avg/3
     local multiplier=math.max(1,1-((max-164)/164))
-    --bring everything up to the max value
-    --(the point where at least red, green, or blue
-    --  is at 255)
+    --scale up color
     for rgbi=1,3 do
       colors[rgbi]=math.min(255,colors[rgbi]*multiplier)
     end
@@ -157,10 +158,12 @@ for rownum=1, rowcols do
 end
 
 -- Canvas Creation
-local canvassize=sizes.card*rowcols+sizes.canvas.margin*2
+local canvassize=(sizes.card+sizes.canvas.gap)*rowcols
+  + sizes.canvas.margin*2
 
 local iupcanvas=iup.canvas{
-  rastersize=sqsz(canvassize),border="NO",
+  rastersize=sqsz(canvassize),
+  bgcolor=iup.GetGlobal"DLGBGCOLOR", border="NO",
   cx=sizes.margins.edges,
   cy=sizes.margins.edges}
 
@@ -188,9 +191,9 @@ local drawcard; do
     can:MarkSize(third*4/5)
     can:TextAlignment(cd.CENTER)
 
-    local right = scard*row
-    local bottom = height-scard*col
-    local left, top= right-scard, bottom+scard
+    local left=(scard+sizes.canvas.gap)*(row-1)
+    local top = height-(scard+sizes.canvas.gap)*(col-1)
+    local right, bottom= left+scard, top-scard
     can:Foreground(card.overall)
     can:Box(left, right, bottom, top)
 
@@ -224,15 +227,29 @@ local drawcard; do
 end
 
 local function drawheatmap(can)
-    for row_index, row in ipairs(cardcolors) do
-      for col_index, cell in ipairs(row) do
-        drawcard(can,col_index, row_index, cell)
-      end
+  --draw bars
+  local scard=sizes.card+sizes.canvas.gap
+  local half=sizes.card/2
+  local sixth=sizes.bars/2
+  for rowcol=1, rowcols do
+    can:Foreground(cd.EncodeColor(unpack(barcolors[rowcol])))
+    can:Box(0, canvassize,
+      canvassize+sizes.canvas.gap-scard*(rowcol)+half-sixth,
+      canvassize+sizes.canvas.gap-scard*(rowcol)+half+sixth)
+    can:Box(scard*(rowcol-1)+half-sixth,
+      scard*(rowcol-1)+half+sixth,canvassize,0)
+  end
+
+  for row_index, row in ipairs(cardcolors) do
+    for col_index, cell in ipairs(row) do
+      drawcard(can,col_index, row_index, cell)
     end
+  end
 end
 
 function iupcanvas:action()
   cdcanvas:Activate()
+  cdcanvas:Background(cd.EncodeColor(unpack(bgcolors)))
   cdcanvas:Clear()
   drawheatmap(cdcanvas)
 end
@@ -250,25 +267,31 @@ local function makecontrols(position, rownotcol)
 
   if rownotcol then
     left= sizes.margins.edges + canvassize + sizes.controls.gap
-    spinleft = left + sizes.margins.right - sizes.controls.textbox.width - sizes.margins.edges
-    sumtop = sizes.margins.edges + position*sizes.card - sizes.card/2
-      - sizes.controls.gap - sizes.controls.textbox.height
-    voltorbtop= sumtop + sizes.controls.gap*2 + sizes.controls.textbox.height
+    spinleft = left + sizes.margins.right
+      - sizes.controls.textbox.width - sizes.margins.edges
+    sumtop = sizes.margins.edges + position*(sizes.card+sizes.canvas.gap)
+      - sizes.card/2 - sizes.controls.gap
+      - sizes.controls.textbox.height - sizes.canvas.gap
+    voltorbtop = sumtop + sizes.controls.gap*2 + sizes.controls.textbox.height
   else
-    left= sizes.margins.edges +(position-1)*(sizes.card) + sizes.controls.gap
-    spinleft= left + sizes.card - sizes.controls.textbox.width - sizes.controls.gap
-    sumtop = sizes.margins.edges + canvassize + sizes.controls.gap
-    voltorbtop= sumtop + sizes.controls.textbox.height + sizes.controls.gap
+    left= sizes.margins.edges +
+      (position-1)*(sizes.card+sizes.canvas.gap) + sizes.controls.gap
+    spinleft= left + sizes.card
+      - sizes.controls.textbox.width - sizes.controls.gap
+    sumtop = sizes.margins.edges
+      + canvassize + sizes.controls.gap
+    voltorbtop= sumtop
+      + sizes.controls.textbox.height + sizes.controls.gap
   end
 
   iup.Append(layout,iup.label{title="Sum:", cx=left,cy=sumtop})
   iup.Append(layout,iup.label{title="VOLTORB:", cx=left,cy=voltorbtop})
   iup.Append(layout,iup.text{spin="YES", cx=spinleft,cy=sumtop,
-    spinmax=3*rowcols, value='?',
+    spinmax=3*rowcols, value='5',
     rastersize=coordstr(sizes.controls.textbox.width,
       sizes.controls.textbox.height)})
   iup.Append(layout,iup.text{spin="YES", cx=spinleft,cy=voltorbtop,
-    spinmax=rowcols, value='?',
+    spinmax=rowcols, value='0',
     rastersize=coordstr(sizes.controls.textbox.width,
       sizes.controls.textbox.height)})
 end
@@ -277,6 +300,12 @@ for rowcol=1, rowcols do
   makecontrols(rowcol,true)
   makecontrols(rowcol,false)
 end
+iup.Append(layout, iup.button{active="NO",
+  title="Undo Selection",rastersize=coordstr(
+    sizes.margins.right-sizes.margins.edges,
+    sizes.controls.textbox.height*2+sizes.controls.gap),
+    cx=canvassize+sizes.margins.edges+sizes.controls.gap,
+    cy=canvassize+sizes.margins.edges+sizes.controls.gap})
 
 local mainwin = iup.dialog{title="Flip the Cards and Collect Coins!",layout}
 mainwin:show()
