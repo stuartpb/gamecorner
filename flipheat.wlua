@@ -1,9 +1,29 @@
--- VOLTORB Flip Probability Heatmap Generator --
--- Libraries
+--[[---------------------------------------------------------------------------
+-- Game Corner                                                               --
+-- A VOLTORB Flip Probability Heatmap Generator                              --
+-- Project Page: launchpad.net/gamecorner                                    --
+---------------------------------------------------------------------------]]--
 
-require 'cdlua'
+-------------------------------------------------------------------------------
+-- C Libraries
+-------------------------------------------------------------------------------
+
+--Required for the interface (controls and whatnot).
 require 'iuplua'
+--Required for drawing the probability table.
+require 'cdlua'
+
+-- The library that allows for the interoperation of the two.
+-- NOTICE! This MUST be included AFTER cdlua or else you will get WEIRD ERRORS
+-- that don't report to Lua like the executable exiting with 0xC0000005.
 require 'iupluacd'
+
+-------------------------------------------------------------------------------
+--Other files
+-------------------------------------------------------------------------------
+
+--Bring in the algorithm to calculate the probabilities
+local calculate_probs = require "probabilities"
 
 --grab the dialog's RGB (and convert it to numbers to be safe)
 local bgcolors={
@@ -94,40 +114,14 @@ for line=1, lines do
   rows[line]={sum=defaults.sum, voltorb=defaults.voltorb}
 end
 
---table of determined
+--table determined probabilities get stored in.
 local probabilities={}
 
-local function calculate_probabilities(rows,cols,probs)
-  local rowprobs, colprobs={},{}
-  for rcprobs, data in pairs{[rowprobs]=rows,[colprobs]=cols} do
-    for line=1, lines do
-      local nonzero = lines-data[line].voltorb
-      local average = data[line].sum/(nonzero)
-      local function oneoff(num)
-        return 1-math.min(1,math.abs(average-num))
-      end
-
-      local threeodds = oneoff(3)
-      local twoodds = oneoff(2)
-      local oneodds = oneoff(1)
-
-      rcprobs[line]={
-        [0]=data[line].voltorb/lines,
-        [1]=oneodds*(nonzero/lines),
-        [2]=twoodds*(nonzero/lines),
-        [3]=threeodds*(nonzero/lines),
-      }
-    end
-  end
-
-  for row=1,lines do
-    probs[row]={}
-    for col=1, lines do
-        probs[row][col]={}
-          for num=0,3 do
-            probs[row][col][num]=rowprobs[row][num]*.5+colprobs[col][num]*.5
-          end
-    end
+--Create tables for each row and card.
+for row=1,lines do
+  probabilities[row]={}
+  for col=1, lines do
+    probabilities[row][col]={}
   end
 end
 
@@ -294,7 +288,7 @@ local layout = iup.cbox{
   iupcanvas}
 
 local function updateheatmap()
-  calculate_probabilities(rows,columns,probabilities)
+  calculate_probs(rows,columns,probabilities)
   generate_colors(probabilities,cardcolors)
   drawcards(cdcanvas,cardcolors)
 end
@@ -587,7 +581,7 @@ iup.Append(layout, iup.button{active="NO",
     cx=canvassize+sizes.margin+sizes.controls.gap,
     cy=canvassize+sizes.margin+sizes.controls.gap})
 
-calculate_probabilities(rows,columns,probabilities)
+calculate_probs(rows,columns,probabilities)
 generate_colors(probabilities,cardcolors)
 
 local mainwin = iup.dialog{title="Game Corner",layout}
