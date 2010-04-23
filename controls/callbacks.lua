@@ -1,5 +1,11 @@
 --Used to get controls to move to when traversing controls.
-local traversal=require "controls.traversal"
+local traversal = require "controls.traversal"
+--Used to keep values valid in relation to each other.
+local inter = require "controls.relations"
+--Used to synchroniza values from the model.
+local syncing = require "controls.synchronization"
+--Used to check that values are within the valid range.
+local is_legal = require "controls.validation"
 
 --used for loops that do stuff to both textboxes.
 local boxtypes={"sum","voltorb"}
@@ -15,95 +21,16 @@ local function make_line_callbacks(position, model, thisaxis, otheraxis, updateh
     iup.SetFocus(traversals[from].advance)
   end
 
-  --pulls the sum control's value with the internal data.
-  --Only used by spin_cb because pulling the spin value causes
-  --problems with redundancy. In most cases pullsum should be used.
-  local function pullsumtext()
-    thisline.sum.value=string.format("%02i",model.sum)
-  end
+  local from_model = syncing(thisline,model)
 
-  --pulls the sum control's values with the internal data.
-  local function pullsum()
-    --pull the spin value
-    thisline.sum.spinvalue=model.sum
-    --pull the text value
-    pullsumtext()
-  end
-
-  --pulls the Voltorb control's text value with the internal data.
-  --Only used by spin_cb because pulling the spin value causes
-  --problems with redundancy. In most cases pullvoltorb should be used.
-  local function pullvoltorbtext()
-    thisline.voltorb.value=string.format("%01i",model.voltorb)
-  end
-
-  --pulls the Voltorb control's values with the internal data.
-  local function pullvoltorb()
-    thisline.voltorb.spinvalue=model.voltorb
-    pullvoltorbtext()
-  end
-
-  --Updates the sum value to be within the realm of possibility with
-  --the passed number of voltorb.
-  local function bindsumtovoltorb(number)
-    local lowest= lines-number
-    local highest= lowest*3
-
-    model.sum=math.max(math.min(model.sum,highest),lowest)
-
-    --update the sum count displayed
-    pullsum()
-  end
-
-  --Binds the Voltorb count to be within the realm of possibility
-  --for the passed sum.
-  local function bindvoltorbtosum(number)
-    local lowest= lines-model.voltorb
-    local highest= lowest*3
-
-    --if sum is impossible with current Voltorb count,
-    --tweak Voltorb count to permit sum spun to
-    while number > highest do
-      model.voltorb= model.voltorb-1
-      highest = (lines-model.voltorb)*3
-    end
-
-    while number < lowest do
-      model.voltorb= model.voltorb+1
-      lowest = lines-model.voltorb
-    end
-
-    --update the Voltorb count displayed
-    pullvoltorb()
-  end
-
-  local function possiblesum(num)
-    local lowest= lines-model.voltorb
-    local highest= lowest*3
-
-    return lowest <= num and num <= highest
-  end
-
-  local function possiblevoltorb(num)
-    local lowest= math.max(0,lines-model.sum)
-    local highest= math.max(0,lines-math.ceil(model.sum/3))
-
-    return lowest <= num and num <= highest
-  end
-
-  local function validsum(num)
-    return 0 <= num and num <= lines*3
-  end
-
-  local function validvoltorb(num)
-    return 0 <= num and num <= lines
-  end
+  local constrain_to = inter.constraint(model,from_model)
+  local is_valid = inter.validation(model)
 
   function thisline.sum:action(c, newvalue)
     local number=tonumber(newvalue)
     if number then
-      if validsum(number) then
-        if possiblesum(number) then
+      if is_legal.sum(number) then
+        if is_valid.sum(number) then
           model.sum = number
           updateheatmap()
         end
@@ -119,47 +46,11 @@ local function make_line_callbacks(position, model, thisaxis, otheraxis, updateh
     end
   end
 
-  function thisline.sum:spin_cb(number)
-    --update the sum count (which we know to be valid
-    --  as it came from spinning which is bound etc)
-    model.sum = number
-    pullsumtext()
-
-    bindvoltorbtosum(number)
-
-    --and update the heatmap
-    updateheatmap()
-  end
-
-  function thisline.sum:getfocus_cb()
-    self.selection="ALL"
-  end
-
-  function thisline.sum:killfocus_cb()
-    number=tonumber(self.value)
-    if number and validsum(number) then
-      model.sum=number
-      bindvoltorbtosum(number)
-      updateheatmap()
-    end
-    pullsum()
-  end
-
-  function thisline.sum:k_any(c)
-    if c == iup.K_CR or c == iup.K_TAB then
-      advance"sum"
-      return iup.IGNORE
-    elseif c== iup.K_sTAB then
-      retractsum()
-      return iup.IGNORE
-    end
-  end
-
   function thisline.voltorb:action(c, newvalue)
     local number=tonumber(newvalue)
     if number then
-      if validvoltorb(number) then
-        if possiblevoltorb(number) then
+      if is_legal.voltorb(number) then
+        if is_valid.voltorb(number) then
           model.voltorb = number
           updateheatmap()
         end
@@ -173,44 +64,69 @@ local function make_line_callbacks(position, model, thisaxis, otheraxis, updateh
     end
   end
 
-  function thisline.voltorb:spin_cb(number)
-    --update the voltorb count (which we know to be valid
-    --  as it came from spinning which is bound etc)
-    model.voltorb=number
-    pullvoltorbtext()
+  --Define functions that are identical for both controls
+  for _, datum in pairs(boxtypes) do
+    local thisbox=thisline[datum]
 
-    bindsumtovoltorb(number)
-
-    --and update the heatmap
-    updateheatmap()
-  end
-
-  function thisline.voltorb:getfocus_cb()
-    self.selection="ALL"
-  end
-
-  function thisline.voltorb:killfocus_cb()
-    number=tonumber(self.value)
-    if number and validvoltorb(number) then
-      model.voltorb=number
-      bindsumtovoltorb(number)
-      updateheatmap()
-    end
-
-    pullvoltorb()
-  end
-
-  --Define the traversal function callbacks.
-  for _, box in pairs(boxtypes) do
-    thisline[box].k_any = function (self, c)
+    --Traversal function callbacks
+    --for handling Tab key and company
+    function thisbox:k_any(c)
+      --If the user pressed Enter or Tab
       if c == iup.K_CR or c == iup.K_TAB then
-        iup.SetFocus(traversals[box].advance)
+        --advance from this box
+        iup.SetFocus(traversals[datum].advance)
         return iup.IGNORE
+      --If they pressed Shift+Tab
       elseif c== iup.K_sTAB then
-        iup.SetFocus(traversals[box].controls)
+        --go back from this box
+        iup.SetFocus(traversals[datum].retract)
         return iup.IGNORE
       end
     end
+
+    --Spin callback when spinning
+    function thisbox:spin_cb(number)
+      --update the model count (which we know to be legal
+      --  as it came from spinning which is bound etc)
+      model[datum] = number
+      from_model[datum].pulltext()
+
+      --constrain the other datum within the valid range
+      --for this new value
+      constrain_to[datum](number)
+
+      --and update the heatmap
+      updateheatmap()
+    end
+
+    --Function to highlight the entire number when getting
+    --keyboard focus
+    function thisbox:getfocus_cb()
+      self.selection="ALL"
+    end
+
+    --Function called when losing keyboard focus
+    function thisbox:killfocus_cb()
+      --Convert this box's value to a number
+      number=tonumber(self.value)
+
+      --If the box contains a valid number
+      --(which it should unless it's blank)
+      --and the number is in the valid range for this datum
+      if number and is_legal[datum](number) then
+        --Make this the new value for this datum
+        model[datum]=number
+        --Constrain the other datum to this one
+        constrain_to[datum](number)
+        --Update the heatmap with this new data
+        updateheatmap()
+      end
+
+      --Set this control's value to the formatted version
+      --of its value in the model
+      from_model[datum].pull()
+    end
+
   end
 end
 
