@@ -6,6 +6,13 @@ local font="Consolas"
 --this value is calculated and stored because it gets used a LOT
 local canvassize=(sizes.card+sizes.cardgap)*lines
 
+local draw={}
+
+function draw.clear(can, bgcolor)
+  can:Background(bgcolor)
+  can:Clear()
+end
+
 do
   local barcolors={ --left to right/top to bottom
     {224,112,80},
@@ -19,7 +26,7 @@ do
     barcolors[line]=cd.EncodeColor(unpack(rgbtable))
   end
 
-  function draw_bars(can)
+  function draw.bars(can)
     local scard=sizes.card+sizes.cardgap
     local half=sizes.card/2
     local sixth=sizes.bars/2
@@ -85,10 +92,12 @@ local drawcard; do
   end
 end
 
-function drawcards(can,cardcolors)
+function draw.cards(can,cardcolors)
   for row_index, row in ipairs(cardcolors) do
     for col_index, cell in ipairs(row) do
       drawcard(can,row_index, col_index, cell)
     end
   end
 end
+
+return draw

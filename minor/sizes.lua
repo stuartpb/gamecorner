@@ -1,4 +1,4 @@
-return {
+local sizes = {
   --Width/height of a card
   card=120,
   --Width of gaps between cards
@@ -19,3 +19,11 @@ return {
     },
   },
 }
+
+--Returns a string in the form of the first integer.."x"..the second.
+--Used for specifying sizes in IUP.
+function sizes.wxh(width, height)
+  return string.format("%ix%i",width,height)
+end
+
+return sizes

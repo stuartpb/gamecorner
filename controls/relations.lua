@@ -58,6 +58,13 @@ function inter.validation(model)
     return lowest <= num and num <= highest
   end
 
+  function is_valid.voltorb(num)
+    local lowest= math.max(0,lines-model.sum)
+    local highest= math.max(0,lines-math.ceil(model.sum/3))
+
+    return lowest <= num and num <= highest
+  end
+
   return is_valid
 end
 

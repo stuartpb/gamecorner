@@ -37,9 +37,9 @@ local generate_colors= require "coloring"
 local sizes = require "minor.sizes"
 
 --Bring in the drawing functions
-require "drawing"
+local draw = require "drawing"
 
---bring in the function to make the controls and sizestr
+--bring in the function to make the controls
 require "controls"
 
 -------------------------------------------------------------------------------
@@ -53,6 +53,20 @@ local defaults={
   sum=5,
   voltorb=0
 }
+
+local dlgbgcolor
+do
+  --grab strings for dialog's red, green, and blue values
+  local bgcolors={
+    string.match(iup.GetGlobal"DLGBGCOLOR",
+      "^(%d+) (%d+) (%d+)$")}
+
+  --convert them to numbers
+  for _, each in pairs(bgcolors) do each=tonumber(each) end
+
+  --encode the color
+  dlgbgcolor = cd.EncodeColor(unpack(bgcolors))
+end
 
 -------------------------------------------------------------------------------
 -- Central table construction
@@ -80,6 +94,17 @@ for row=1,lines do
   for col=1, lines do
     probabilities[row][col]={}
     cardcolors[row][col]={subsquares={}}
+    --initialize all indices where values go
+    do
+      for sub=0,4 do
+        if sub~=4 then --because 4 is for the center subsquare only
+          probabilities[row][col][sub]=.25
+          cardcolors[row][col][sub]=dlgbgcolor
+        end
+        cardcolors[row][col].subsquares[sub]=dlgbgcolor
+      end
+      cardcolors[row][col].overall=dlgbgcolor
+    end
   end
 end
 
@@ -89,43 +114,35 @@ end
 
 -- Canvas Creation
 local iupcanvas=iup.canvas{
-  rastersize=sizestr(canvassize,canvassize),
+  rastersize=sizes.wxh(canvassize,canvassize),
   bgcolor=iup.GetGlobal"DLGBGCOLOR", border="NO",
   cx=sizes.margin,
   cy=sizes.margin}
 
-local cdcanvas
+--Declare variables for buffers that are initialized
+--after the canvas is mapped.
+local frontbuffer,backbuffer
 function iupcanvas:map_cb()
-  cdcanvas=cd.CreateCanvas(cd.IUP,self)
+  --Create the front buffer (which is never really used,
+  --but that's no reason not to keep it referenced)
+  frontbuffer=cd.CreateCanvas(cd.IUP,self)
+
+  --double-buffer to eliminate flickering.
+  --In testing this didn't change memory consumption.
+  backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
 end
 
-do
-  local dlgbgcolor
-  do
-    --grab strings for dialog's red, green, and blue values
-    local bgcolors={
-      string.match(iup.GetGlobal"DLGBGCOLOR",
-        "^(%d+) (%d+) (%d+)$")}
-
-    --convert them to numbers
-    for _, each in pairs(bgcolors) do each=tonumber(each) end
-
-    --encode the color
-    dlgbgcolor = cd.EncodeColor(unpack(bgcolors))
-  end
-
-  function iupcanvas:action()
-    cdcanvas:Activate()
-    cdcanvas:Background(dlgbgcolor)
-    cdcanvas:Clear()
-    draw_bars(cdcanvas)
-    drawcards(cdcanvas,cardcolors)
-  end
+function iupcanvas:action()
+  backbuffer:Activate()
+  draw.clear(backbuffer,dlgbgcolor)
+  draw.bars(backbuffer)
+  draw.cards(backbuffer,cardcolors)
+  backbuffer:Flush()
 end
 
 --Layout Construction
 local layout = iup.cbox{
-  rastersize=sizestr(
+  rastersize=sizes.wxh(
     canvassize+sizes.margin*2+
       sizes.rspace,
     canvassize+sizes.margin*2+
@@ -135,22 +152,32 @@ local layout = iup.cbox{
 local function updateheatmap()
   calculate_probs(rows,columns,probabilities)
   generate_colors(probabilities,cardcolors,cd.EncodeColor)
-  drawcards(cdcanvas,cardcolors)
+  backbuffer:Activate()
+  draw.cards(backbuffer,cardcolors)
+  backbuffer:Flush()
 end
+
+-------------------------------------------------------------------------------
+-- Control creation
+-------------------------------------------------------------------------------
 
 --Make all the controls and place them into the layout
 make_controls(layout,rows,columns,updateheatmap,defaults)
 
-iup.Append(layout, iup.button{active="NO",
-  title="Undo Selection",rastersize=sizestr(
-    sizes.rspace-sizes.margin,
-    sizes.controls.textbox.height*2+sizes.controls.gap),
-    cx=canvassize+sizes.margin+sizes.controls.gap,
-    cy=canvassize+sizes.margin+sizes.controls.gap})
+-------------------------------------------------------------------------------
+-- Data initialization
+-------------------------------------------------------------------------------
 
 calculate_probs(rows,columns,probabilities)
 generate_colors(probabilities,cardcolors,cd.EncodeColor)
 
+-------------------------------------------------------------------------------
+-- Program start
+-------------------------------------------------------------------------------
+
+--Store the main window just because it's good form
 local mainwin = iup.dialog{title="Game Corner",layout}
+--show the main window
 mainwin:show()
+--Relinquish flow control to IUP
 iup.MainLoop()

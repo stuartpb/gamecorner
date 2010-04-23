@@ -12,15 +12,18 @@ local function construct_line_controls(position,axis,textboxes,labels,defaults)
 
   local left, right, sumtop, voltorbtop
   if axis=="rows" then
+
     left= sizes.margin + canvassize + sizes.controls.gap
     spinleft = left + sizes.rspace
-      - sizes.controls.textbox.width - sizes.margin
+      - sizes.controls.textbox.width
     sumtop = sizes.margin + position*(sizes.card+sizes.cardgap)
       - sizes.card/2 - sizes.controls.gap
       - sizes.controls.textbox.height - sizes.cardgap
     voltorbtop = sumtop + sizes.controls.gap*2
       + sizes.controls.textbox.height
+
   elseif axis=="columns" then
+
     left= sizes.margin +
       (position-1)*(sizes.card+sizes.cardgap) + sizes.controls.gap
     spinleft= left + sizes.card
@@ -29,6 +32,7 @@ local function construct_line_controls(position,axis,textboxes,labels,defaults)
       + canvassize + sizes.controls.gap
     voltorbtop= sumtop
       + sizes.controls.textbox.height + sizes.controls.gap
+
   else error "line controls can only be for rows or columns"
   end
 
@@ -38,17 +42,17 @@ local function construct_line_controls(position,axis,textboxes,labels,defaults)
     cx=spinleft,cy=sumtop, spinauto="NO",
     spinmax=3*lines, spinvalue=defaults.sum,
     value=string.format("%02i",defaults.sum),
-    rastersize=sizestr(sizes.controls.textbox.width,
+    rastersize=sizes.wxh(sizes.controls.textbox.width,
       sizes.controls.textbox.height)}
   lineboxes.voltorb=iup.text{spin="YES", mask=iup.MASK_UINT,
     cx=spinleft,cy=voltorbtop, spinauto="NO",
     spinmax=lines, value=defaults.voltorb,
     value=string.format("%01i",defaults.voltorb),
-    rastersize=sizestr(sizes.controls.textbox.width,
+    rastersize=sizes.wxh(sizes.controls.textbox.width,
       sizes.controls.textbox.height)}
 end
 
-function construct_controls(textboxes,labels,defaults)
+return function (textboxes,labels,defaults)
   for _, axis in pairs{"rows","columns"} do
     for line=1, lines do
       textboxes[axis][line]={}
