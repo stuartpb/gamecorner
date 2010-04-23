@@ -22,8 +22,9 @@ require 'iupluacd'
 -- Game Corner modules
 -------------------------------------------------------------------------------
 
---Basically everything hinges on the number of lines on a Voltrob Flip board,
---so I'm just making it a global before I require them
+--Basically everything hinges on the number of lines on a Voltorb Flip board,
+--so I'm just making it a global before I require them rather than make
+--every single module explicitly require it or define it
 lines=5
 
 --Bring in the algorithm to calculate the probabilities
@@ -32,14 +33,18 @@ local calculate_probs = require "probabilities"
 --Bring in the algorithm to calculate the colors from those probabilities
 local generate_colors= require "coloring"
 
---Bring in sizes (and localize them because it's SO important)
-local sizes = require "sizes"
+--Sizes are required for the construction of the canvas and layout
+local sizes = require "minor.sizes"
 
 --Bring in the drawing functions
 require "drawing"
 
---bring in the function to make the controls, coordstr, and sqsz
+--bring in the function to make the controls and sizestr
 require "controls"
+
+-------------------------------------------------------------------------------
+-- "Constant" value definitions
+-------------------------------------------------------------------------------
 
 --this value is calculated and stored because it gets used a LOT
 local canvassize=(sizes.card+sizes.cardgap)*lines
@@ -49,12 +54,17 @@ local defaults={
   voltorb=0
 }
 
+-------------------------------------------------------------------------------
+-- Central table construction
+-------------------------------------------------------------------------------
+
 local columns={}
 local rows={}
 --initialize column and row data
 for line=1, lines do
-  columns[line]={sum=defaults.sum, voltorb=defaults.voltorb}
-  rows[line]={sum=defaults.sum, voltorb=defaults.voltorb}
+  for _, axis in pairs{rows,columns} do
+    axis[line]={sum=defaults.sum, voltorb=defaults.voltorb}
+  end
 end
 
 --table determined probabilities get stored in.
@@ -73,9 +83,13 @@ for row=1,lines do
   end
 end
 
+-------------------------------------------------------------------------------
+-- Central object construction
+-------------------------------------------------------------------------------
+
 -- Canvas Creation
 local iupcanvas=iup.canvas{
-  rastersize=sqsz(canvassize),
+  rastersize=sizestr(canvassize,canvassize),
   bgcolor=iup.GetGlobal"DLGBGCOLOR", border="NO",
   cx=sizes.margin,
   cy=sizes.margin}
@@ -109,8 +123,12 @@ do
   end
 end
 
+--Make all the controls and place them into the layout
+make_controls(layout,rows,columns,updateheatmap,defaults)
+
+--Layout Construction
 local layout = iup.cbox{
-  rastersize=coordstr(
+  rastersize=sizestr(
     canvassize+sizes.margin*2+
       sizes.rspace,
     canvassize+sizes.margin*2+
@@ -123,20 +141,8 @@ local function updateheatmap()
   drawcards(cdcanvas,cardcolors)
 end
 
-local textboxes={rows={},columns={}}
-make_controls(textboxes,layout,rows,columns,updateheatmap)
-
-local function update_controls()
-  for line=1, lines do
-    textboxes.rows[line].sum.value=rows[line].sum
-    textboxes.rows[line].voltorb.value=rows[line].voltorb
-    textboxes.columns[line].sum.value=columns[line].sum
-    textboxes.columns[line].voltorb.value=columns[line].voltorb
-  end
-end
-
 iup.Append(layout, iup.button{active="NO",
-  title="Undo Selection",rastersize=coordstr(
+  title="Undo Selection",rastersize=sizestr(
     sizes.rspace-sizes.margin,
     sizes.controls.textbox.height*2+sizes.controls.gap),
     cx=canvassize+sizes.margin+sizes.controls.gap,
