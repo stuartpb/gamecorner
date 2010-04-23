@@ -5,7 +5,7 @@ local traversal=require "controls.traversal"
 local boxtypes={"sum","voltorb"}
 
 --Function that adds callback functionality to the controls of a line.
-local function make_line_callbacks(position, model, thisaxis, otheraxis)
+local function make_line_callbacks(position, model, thisaxis, otheraxis, updateheatmap)
   local thisline=thisaxis[position]
 
   local traversals=traversal(position,thisaxis,otheraxis)
@@ -217,7 +217,7 @@ end
 
 function make_callbacks(textboxes,rows,columns,updateheatmap)
   for line=1, lines do
-    make_line_callbacks(line,rows[line],textboxes.rows,textboxes.columns)
-    make_line_callbacks(line,columns[line],textboxes.columns,textboxes.rows)
+    make_line_callbacks(line,rows[line],textboxes.rows,textboxes.columns,updateheatmap)
+    make_line_callbacks(line,columns[line],textboxes.columns,textboxes.rows,updateheatmap)
   end
 end

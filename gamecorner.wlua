@@ -123,9 +123,6 @@ do
   end
 end
 
---Make all the controls and place them into the layout
-make_controls(layout,rows,columns,updateheatmap,defaults)
-
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizestr(
@@ -140,6 +137,9 @@ local function updateheatmap()
   generate_colors(probabilities,cardcolors,cd.EncodeColor)
   drawcards(cdcanvas,cardcolors)
 end
+
+--Make all the controls and place them into the layout
+make_controls(layout,rows,columns,updateheatmap,defaults)
 
 iup.Append(layout, iup.button{active="NO",
   title="Undo Selection",rastersize=sizestr(

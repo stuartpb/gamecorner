@@ -56,7 +56,7 @@ end
 -- Main function
 -------------------------------------------------------------------------------
 
-function make_controls(layout, rows, columns, updateheatmap,defaults)
+function make_controls(layout, rows, columns, updateheatmap, defaults)
   construct_controls(textboxes,labels,defaults)
   make_callbacks(textboxes,rows,columns,updateheatmap)
   place_controls(layout,textboxes,labels)
