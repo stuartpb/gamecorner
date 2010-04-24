@@ -1,5 +1,5 @@
 --Sizes are required to know where to draw anything
-local sizes = require "minor.sizes"
+local sizes = require "sizes"
 
 local font="Consolas"
 

@@ -1,18 +1,11 @@
 --Functions for synchronizing the controls with the model.
 
---The number of digits for both textboxes.
-local digits={sum=2,voltorb=1}
-
---The format parameters to string.format to fill with zeroes
---for that many digits.
-local formats={}
-for k, digits in pairs(digits) do
-  formats[k]=string.format("%%0%ii",digits)
-end
+--For formatting the text values appropriately.
+local formatters = require "controls.formatting"
 
 return function (thisline,model)
   local frommodel={}
-  for datum, formatstring in pairs(formats) do
+  for datum, formatter in pairs(formatters) do
 
     --Create table for holding these functions
     frommodel[datum]={}
@@ -23,7 +16,7 @@ return function (thisline,model)
     --spin callback results in issues coming from redundancy.
     --In normal circumstances the main pull function should be used.
     local function pulltext()
-      thisline[datum].value=string.format(formats[datum],model[datum])
+      thisline[datum].value=formatter(model[datum])
     end
 
     --Pulls the control's state from the model.

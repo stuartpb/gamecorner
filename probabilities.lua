@@ -23,10 +23,8 @@ The probability calculation algorithm.
 
 ---- Constants --------------------------------------------
 
--- There are 5 lines on a Voltorb Flip board.
--- Strictly speaking this should be defined by a separate file, but,
--- seriously? It's not likely
-local lines=5
+-- "lines" is a global representing the number of rows and columns
+-- defined as 5 in the main script.
 
 ---- Variables --------------------------------------------
 

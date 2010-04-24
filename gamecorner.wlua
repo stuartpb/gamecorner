@@ -27,6 +27,17 @@ require 'iupluacd'
 --every single module explicitly require it or define it
 lines=5
 
+--If we've got the filename the script was run with
+if arg and arg[0] then
+  --find the path to this file, if there is one
+  local directory=(string.find(arg[0],[=[[/\][^/\]-$]=]))
+  --If this script was run from some sort of path up to the script
+  if directory then
+    --make sure that all module operations start their search in this path
+    package.path=';'..string.sub(arg[0],1,directory)..'?.lua'..package.path
+  end
+end
+
 --Bring in the algorithm to calculate the probabilities
 local calculate_probs = require "probabilities"
 
@@ -34,7 +45,7 @@ local calculate_probs = require "probabilities"
 local generate_colors= require "coloring"
 
 --Sizes are required for the construction of the canvas and layout
-local sizes = require "minor.sizes"
+local sizes = require "sizes"
 
 --Bring in the drawing functions
 local draw = require "drawing"
@@ -46,7 +57,7 @@ require "controls"
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
 
---this value is calculated and stored because it gets used a LOT
+--Used for constructing the canvas and layout
 local canvassize=(sizes.card+sizes.cardgap)*lines
 
 local defaults={
@@ -143,10 +154,14 @@ end
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizes.wxh(
-    canvassize+sizes.margin*2+
-      sizes.rspace,
-    canvassize+sizes.margin*2+
-      sizes.controls.gap*2+sizes.controls.textbox.height*2),
+    canvassize --
+      + sizes.margin*2 -- plus the left and right margin
+      + sizes.rspace, -- plus the arbitrary amount of space
+                      -- for the controls to the right
+    canvassize
+      + sizes.margin*2
+      + sizes.controls.gap*2
+      + sizes.controls.textbox.height*2),
   iupcanvas}
 
 local function updateheatmap()
