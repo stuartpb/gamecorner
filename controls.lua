@@ -2,15 +2,15 @@
 -- Sub-modules
 -------------------------------------------------------------------------------
 
-local construct_controls=require "controls.construction"
+local construct_controls = require "controls.construction"
 --Function that gives all controls their callbacks.
-local make_callbacks=require "controls.callbacks"
+local make_callbacks = require "controls.callbacks"
 
 -------------------------------------------------------------------------------
 -- Main function
 -------------------------------------------------------------------------------
 
-function make_controls(layout, rows, columns, updateheatmap, defaults)
+return function (layout, model, updateheatmap, defaults)
   --The textboxes. Used by controls and layout.
   local textboxes={rows={},columns={}}
   --The labels. Not used after layout.
@@ -19,7 +19,7 @@ function make_controls(layout, rows, columns, updateheatmap, defaults)
   --Construct controls inside of these tables
   construct_controls(textboxes,labels,defaults)
   --Add callbacks to these controls
-  make_callbacks(textboxes,rows,columns,updateheatmap)
+  make_callbacks(textboxes,model,updateheatmap)
 
   local axes={"rows","columns"}
   local datatypes={"sum","voltorb"}
@@ -39,4 +39,7 @@ function make_controls(layout, rows, columns, updateheatmap, defaults)
       end
     end
   end
+
+  --The control to give initial focus to.
+  return textboxes.columns[1].sum
 end

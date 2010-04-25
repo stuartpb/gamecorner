@@ -83,20 +83,19 @@ end
 -------------------------------------------------------------------------------
 return function (
 
-  rows, -- Parameter 1: Table of input.
-          -- The data (sum of the numbers on all cards and the number of
-          -- Voltorbs) for each row, in the form of an array of 5 tables
-          -- (one for each row, from top to bottom), each with with the sum of
-          -- the numbers on all of that row's cards being at index "sum",
-          -- and the number of Voltorb in the row being at index "voltorb".
+  model, -- Parameter 1: Table of input.
+          -- A table containing two tables, one at the index 'rows',
+          -- and the other at the index 'columns', which each have five tables
+          -- (one for each row / column, numbered from top to bottom (for rows)
+          -- and left to right (for columns)). Each row / column's table contains
+          -- two values: the sum of all that row / column's cards, found at the
+          -- index 'sum', and the number of Voltorb in that row / column, found
+          -- at the index 'voltorb'.
 
           -- (So, to get the number of Voltorb in the second row from the top,
-          -- you would check "rows[2].voltorb".)
+          -- you would check "model.rows[2].voltorb".)
 
-  cols, -- Parameter 2: Table of input.
-          -- Same thing, but for the columns (from left to right).
-
-  probs -- Parameter 3: Table for output.
+  probs -- Parameter 2: Table for output.
           -- A table containing 5 tables (one for each row from top to
           -- bottom), each containing 5 further tables (one for each
           -- column's card in that row). The tables for the cards contain 4
@@ -106,7 +105,7 @@ return function (
 
           -- For example, if the card in the bottom-left corner has an equal
           -- probability of being either a Voltorb or a 3, then both
-          -- probs[5][1][0] and probs[5][1][3] would be equal to 0.5:
+          -- probs[5][1][0] and probs[5][1][3] would be set to 0.5:
           --  - probs[5] represents the cards in the fifth (bottom) row,
           --  - probs[5][1] represents the leftmost card in this row
           --    (the card in the first column from left to right),
@@ -135,7 +134,7 @@ return function (
   --Implementation for the naive algorithm:
 
   --calculate the probabilities for these rows and columns
-  calculate_rcprobs(rows,cols)
+  calculate_rcprobs(model.rows,model.columns)
 
   --For every row,
   for row=1,lines do

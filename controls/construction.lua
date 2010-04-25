@@ -88,12 +88,15 @@ local function construct_line_controls(
   linelabels.sum= iup.label{title="Sum:", cx=left,cy=tops.sum}
   linelabels.voltorb= iup.label{title="VOLTORB:", cx=left,cy=tops.voltorb}
 
+  --save the string for the size for textboxes
   local textboxsize = sizes.wxh(sizes.controls.textbox.width,
     sizes.controls.textbox.height)
+
   --Function for creating both textboxes.
   local function maketextbox (box, max)
     lineboxes[box] = iup.text{
       mask = iup.MASK_UINT, -- allow only digits
+      alignment = "ARIGHT", --just like in the games
       spin = "YES", -- give us those incrementing arrows on the side and all
       spinauto = "NO", -- since we format the text value ourselves
                        -- we turn off the automatic update of the text value
@@ -107,15 +110,25 @@ local function construct_line_controls(
     }
   end
 
+  --Make the textboxes
   maketextbox('sum', 3*lines)
   maketextbox('voltorb', lines)
 end
 
+--Module Function
+--Constructs all controls and places them in tables in the tables at
+--the "rows" and "columns" indices in the passed tables.
+--Sum and Voltorb textboxes are initialized with the default values
+--specified in the third table.
 return function (textboxes,labels,defaults)
+  --For both rows and columns
   for _, axis in pairs{"rows","columns"} do
+    --For each line
     for line=1, lines do
+      --Create tables for this line in both control tables
       textboxes[axis][line]={}
       labels[axis][line]={}
+      --Construct this line's labels and textboxes.
       construct_line_controls(axis,line,textboxes,labels,defaults)
     end
   end

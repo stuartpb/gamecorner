@@ -50,8 +50,11 @@ local sizes = require "sizes"
 --Bring in the drawing functions
 local draw = require "drawing"
 
---bring in the function to make the controls
-require "controls"
+--Bring in the function to make the controls
+local make_controls = require "controls"
+
+--Bring in the Voltorb image used for the window icon
+local voltorb_icon = require "images.voltorb"
 
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
@@ -83,11 +86,10 @@ end
 -- Central table construction
 -------------------------------------------------------------------------------
 
-local columns={}
-local rows={}
---initialize column and row data
+local model={rows={},columns={}}
+--initialize model data
 for line=1, lines do
-  for _, axis in pairs{rows,columns} do
+  for axisname, axis in pairs(model) do
     axis[line]={sum=defaults.sum, voltorb=defaults.voltorb}
   end
 end
@@ -164,8 +166,9 @@ local layout = iup.cbox{
       + sizes.controls.textbox.height*2),
   iupcanvas}
 
+--Function that updates the heatmap whenver the values change.
 local function updateheatmap()
-  calculate_probs(rows,columns,probabilities)
+  calculate_probs(model,probabilities)
   generate_colors(probabilities,cardcolors,cd.EncodeColor)
   backbuffer:Activate()
   draw.cards(backbuffer,cardcolors)
@@ -177,13 +180,13 @@ end
 -------------------------------------------------------------------------------
 
 --Make all the controls and place them into the layout
-make_controls(layout,rows,columns,updateheatmap,defaults)
+local firstcontrol = make_controls(layout,model,updateheatmap,defaults)
 
 -------------------------------------------------------------------------------
 -- Data initialization
 -------------------------------------------------------------------------------
 
-calculate_probs(rows,columns,probabilities)
+calculate_probs(model,probabilities)
 generate_colors(probabilities,cardcolors,cd.EncodeColor)
 
 -------------------------------------------------------------------------------
@@ -191,7 +194,11 @@ generate_colors(probabilities,cardcolors,cd.EncodeColor)
 -------------------------------------------------------------------------------
 
 --Store the main window just because it's good form
-local mainwin = iup.dialog{title="Game Corner",layout}
+local mainwin = iup.dialog{
+  icon=voltorb_icon,
+  title="Game Corner",
+  startfocus=firstcontrol;
+  layout}
 --show the main window
 mainwin:show()
 --Relinquish flow control to IUP
