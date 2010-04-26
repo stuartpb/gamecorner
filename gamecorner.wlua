@@ -59,6 +59,8 @@ local voltorb_icon = require "images.voltorb"
 --Bring in the window's menu
 local menu = require "menu"
 
+--Bring in the callbacks for the canvas
+local cancb = require "canvas"
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
@@ -136,6 +138,8 @@ local iupcanvas=iup.canvas{
   cx=sizes.margin,
   cy=sizes.margin}
 
+cancb(iupcanvas,{},{{},{},{},{},{}})
+
 --Declare variables for buffers that are initialized
 --after the canvas is mapped.
 local frontbuffer,backbuffer
@@ -160,7 +164,7 @@ end
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizes.wxh(
-    canvassize --the width of the canvas
+    canvassize -- the width of the canvas
       + sizes.margin*2 -- plus the left and right margin
       + sizes.controls.gap -- plus the gap between the canvas and controls
       + sizes.controls.width, --plus the width of the controls
