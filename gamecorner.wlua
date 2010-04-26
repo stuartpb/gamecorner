@@ -106,10 +106,24 @@ local probabilities={}
 --table determined cards get stored in.
 local cardcolors={}
 
+--table of revealed cards
+local revealed={}
+
+--Table storing card selection info.
+local selection={
+  --Table storing the current information for the cursor state
+  --in terms of card selection
+  focus={},
+  revealed=revealed
+}
+
 --Create all tables for each row and card.
 for row=1,lines do
+
   probabilities[row]={}
   cardcolors[row]={}
+  revealed[row]={}
+
   for col=1, lines do
     probabilities[row][col]={}
     cardcolors[row][col]={subsquares={}}
@@ -138,8 +152,6 @@ local iupcanvas=iup.canvas{
   cx=sizes.margin,
   cy=sizes.margin}
 
-cancb(iupcanvas,{},{{},{},{},{},{}})
-
 --Declare variables for buffers that are initialized
 --after the canvas is mapped.
 local frontbuffer,backbuffer
@@ -151,6 +163,9 @@ function iupcanvas:map_cb()
   --double-buffer to eliminate flickering.
   --In testing this didn't change memory consumption.
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
+
+  --Give the canvas the rest of its callbacks
+  cancb(iupcanvas,backbuffer,selection,probabilities)
 end
 
 function iupcanvas:action()
@@ -206,6 +221,8 @@ local mainwin = iup.dialog{
   icon=voltorb_icon,
   title="Game Corner",
   menu=menu,
+  --since we really have NO support for resizing we just flat out disable it
+  resize="no",
   startfocus=textboxes.columns[1].sum;
   layout}
 --show the main window
