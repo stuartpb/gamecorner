@@ -45,7 +45,7 @@ local calculate_probs = require "probabilities"
 local generate_colors= require "coloring"
 
 --Sizes are required for the construction of the canvas and layout
-local sizes = require "sizes"
+local sizes = require "settings.sizes"
 
 --Bring in the drawing functions
 local draw = require "drawing"
@@ -55,6 +55,9 @@ local make_controls = require "controls"
 
 --Bring in the Voltorb image used for the window icon
 local voltorb_icon = require "images.voltorb"
+
+--Bring in the window's menu
+local menu = require "menu"
 
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
@@ -180,7 +183,7 @@ end
 -------------------------------------------------------------------------------
 
 --Make all the controls and place them into the layout
-local firstcontrol = make_controls(layout,model,updateheatmap,defaults)
+local textboxes = make_controls(layout,model,updateheatmap,defaults)
 
 -------------------------------------------------------------------------------
 -- Data initialization
@@ -197,7 +200,8 @@ generate_colors(probabilities,cardcolors,cd.EncodeColor)
 local mainwin = iup.dialog{
   icon=voltorb_icon,
   title="Game Corner",
-  startfocus=firstcontrol;
+  menu=menu,
+  startfocus=textboxes.columns[1].sum;
   layout}
 --show the main window
 mainwin:show()

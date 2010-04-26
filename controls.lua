@@ -1,4 +1,11 @@
 -------------------------------------------------------------------------------
+-- Required C Libraries
+-------------------------------------------------------------------------------
+
+--This module uses the Append function directly from IUPLua.
+require "iuplua"
+
+-------------------------------------------------------------------------------
 -- Sub-modules
 -------------------------------------------------------------------------------
 
@@ -40,6 +47,7 @@ return function (layout, model, updateheatmap, defaults)
     end
   end
 
-  --The control to give initial focus to.
-  return textboxes.columns[1].sum
+  --Return textboxes so the main script can set initial focus
+  --and can update all of them when the model changes independently
+  return textboxes
 end

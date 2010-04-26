@@ -1,11 +1,30 @@
+-------------------------------------------------------------------------------
+-- Required C Libraries
+-------------------------------------------------------------------------------
+
+--This module uses constructors directly from IUPLua.
+require "iuplua"
+
+-------------------------------------------------------------------------------
+-- Game Corner modules
+-------------------------------------------------------------------------------
+
 --Required for both sizing and positioning
-local sizes = require "sizes"
+local sizes = require "settings.sizes"
 --Required for initializing the default text values.
 local formatters = require "controls.formatting"
+
+-------------------------------------------------------------------------------
+-- "Constant" value definitions
+-------------------------------------------------------------------------------
 
 --Gets used for stuff like where to position the column controls
 --(below the bottom of the canvas)
 local canvassize=(sizes.card+sizes.cardgap)*lines
+
+-------------------------------------------------------------------------------
+-- Module functionality
+-------------------------------------------------------------------------------
 
 --Constructs the controls for a row or column.
 local function construct_line_controls(

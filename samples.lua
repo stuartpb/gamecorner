@@ -144,7 +144,9 @@ function fromsample.singular_probs(sample)
   return exact_probs
 end
 
-function fromsample.set_data(sample, rows, columns)
+--Sets the data in the model to reflect the sample.
+function fromsample.set_data(sample, model)
+  local rows, columns = model.rows, model.columns
   for major=1,lines do
     columns[major].sum=0
     columns[major].voltorb=0

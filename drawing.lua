@@ -1,18 +1,45 @@
---Sizes are required to know where to draw anything
-local sizes = require "sizes"
+-------------------------------------------------------------------------------
+-- Required C Libraries
+-------------------------------------------------------------------------------
 
-local font="Consolas"
+--on top of calling several functions from a CanvasDraw canvas, this module
+--calls cd.MM2PT and cd.EncodeColor directly.
+require "cdlua"
+
+-------------------------------------------------------------------------------
+-- Game Corner modules
+-------------------------------------------------------------------------------
+
+--Sizes are required to know where to draw anything
+local sizes = require "settings.sizes"
+
+--Required for drawing the "1", "2", and "3".
+local fonts = require "settings.fonts"
+
+-------------------------------------------------------------------------------
+-- "Constant" value definitions
+-------------------------------------------------------------------------------
+
+--The font to write the numbers in.
+local font= fonts.drawing
 
 --this value is calculated and stored because it gets used a LOT
 local canvassize=(sizes.card+sizes.cardgap)*lines
 
+-------------------------------------------------------------------------------
+-- Module definition
+-------------------------------------------------------------------------------
+
+--Define the table to store the module's functions in.
 local draw={}
 
+--Function to clear the canvas with a given color.
 function draw.clear(can, bgcolor)
   can:Background(bgcolor)
   can:Clear()
 end
 
+--Function for drawing colored bars behind cards.
 do
   local barcolors={ --left to right/top to bottom
     {224,112,80},
@@ -22,6 +49,7 @@ do
     {192,96,224}
   }
 
+  --Exchange all color sets for CD encoded colors
   for line, rgbtable in pairs(barcolors) do
     barcolors[line]=cd.EncodeColor(unpack(rgbtable))
   end
@@ -41,6 +69,7 @@ do
   end
 end
 
+--Function for drawing an individual card.
 local drawcard; do
   local scard = sizes.card
   local third = scard/3
