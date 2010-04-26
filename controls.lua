@@ -30,7 +30,6 @@ return function (layout, model, updateheatmap, defaults)
 
   local axes={"rows","columns"}
   local datatypes={"sum","voltorb"}
-  local controlsets={labels,textboxes}
 
   --All this is done in a specific order because the order controls
   --are appended to the cbox is used for things like order when you
@@ -39,10 +38,9 @@ return function (layout, model, updateheatmap, defaults)
 
   for _, axis in ipairs(axes) do
     for line=1, lines do
+      iup.Append(layout,labels[axis][line])
       for _, datum in ipairs(datatypes) do
-        for _, controls in ipairs(controlsets) do
-          iup.Append(layout,controls[axis][line][datum])
-        end
+        iup.Append(layout,textboxes[axis][line][datum])
       end
     end
   end

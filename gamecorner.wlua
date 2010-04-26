@@ -159,14 +159,14 @@ end
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizes.wxh(
-    canvassize --
+    canvassize --the width of the canvas
       + sizes.margin*2 -- plus the left and right margin
-      + sizes.rspace, -- plus the arbitrary amount of space
-                      -- for the controls to the right
+      + sizes.controls.gap -- plus the gap between the canvas and controls
+      + sizes.controls.width, --plus the width of the controls
     canvassize
       + sizes.margin*2
       + sizes.controls.gap*2
-      + sizes.controls.textbox.height*2),
+      + sizes.controls.height*2),
   iupcanvas}
 
 --Function that updates the heatmap whenver the values change.
