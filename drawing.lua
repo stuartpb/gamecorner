@@ -16,6 +16,12 @@ local sizes = require "settings.sizes"
 --Required for drawing the "1", "2", and "3".
 local fonts = require "settings.fonts"
 
+--Required for the background bars.
+local colors = require "settings.colors"
+
+--Used for drawing numbers.
+local digits = require "images.digits"
+
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
@@ -41,16 +47,10 @@ end
 
 --Function for drawing colored bars behind cards.
 do
-  local barcolors={ --left to right/top to bottom
-    {224,112,80},
-    {64,168,64},
-    {232,160,56},
-    {48,144,248},
-    {192,96,224}
-  }
+  local barcolors={}
 
   --Exchange all color sets for CD encoded colors
-  for line, rgbtable in pairs(barcolors) do
+  for line, rgbtable in pairs(colors.lines) do
     barcolors[line]=cd.EncodeColor(unpack(rgbtable))
   end
 

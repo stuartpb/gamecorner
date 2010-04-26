@@ -89,6 +89,7 @@ end
 -- Central table construction
 -------------------------------------------------------------------------------
 
+--Table for data for row and column sums and Voltorb counts.
 local model={rows={},columns={}}
 --initialize model data
 for line=1, lines do
@@ -159,14 +160,14 @@ end
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizes.wxh(
-    canvassize --
+    canvassize --the width of the canvas
       + sizes.margin*2 -- plus the left and right margin
-      + sizes.rspace, -- plus the arbitrary amount of space
-                      -- for the controls to the right
+      + sizes.controls.gap -- plus the gap between the canvas and controls
+      + sizes.controls.width, --plus the width of the controls
     canvassize
       + sizes.margin*2
       + sizes.controls.gap*2
-      + sizes.controls.textbox.height*2),
+      + sizes.controls.height*2),
   iupcanvas}
 
 --Function that updates the heatmap whenver the values change.
