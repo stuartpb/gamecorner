@@ -39,7 +39,7 @@ local function oncard(x,y)
     local right=left+scard
     local bottom=top+scard
 
-    if x>=left and x<=right and y<=bottom and y>=top
+    if x>=left and x<right and y<bottom and y>=top
     then
       local sector=x > left+half and 1 or 0
 
@@ -47,7 +47,7 @@ local function oncard(x,y)
         sector=sector+2
       end
 
-      return sector, math.ceil(y/cardgap), math.ceil(x/cardgap)
+      return sector, math.floor(y/cardgap)+1, math.floor(x/cardgap)+1
     else return nil end
 end
 
@@ -58,7 +58,6 @@ end
 --Sets callbacks for the canvas.
 return function(iupcanvas,cdcan,selection,colors,updateheatmap)
 
-local ballbs=''
   function iupcanvas:motion_cb(x,y,status)
     local lmb_pressed=iup.isbutton1(status)
     local current=selection.focus
@@ -98,7 +97,6 @@ local ballbs=''
           colors[current.row][current.column])
         swapbuffers=true
       end
-
       if sector and revealed[row][column] then
         current.sector=nil
         current.row=nil
@@ -156,7 +154,7 @@ local ballbs=''
       end
 
     else --if the left mouse button was not already down
-      --if the cursor was on a valid card ballbs=ballbs..(current.selected and 'B' or "b")
+      --if the cursor was on a valid card
       if sector and not revealed[row][column] then
         current.row = row
         current.column = column

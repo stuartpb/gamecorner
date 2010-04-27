@@ -50,15 +50,18 @@ local memosize=scard/4
 --Define the table to store the module's functions in.
 local draw={}
 
-local function drawdigit(can,set,number,xcenter,ycenter)
+local function drawdigit(can,set,number,xcenter,ycenter,size,colors)
   local digit = digits[set][number]
   local width, height = #digit[1], #digit
-  local pixel = memosize/height
+  local pixel = size/height
   local left, top = xcenter-pixel*(width/2), ycenter+pixel*(height/2)
 
-  for y=1,5 do
-    for x=1,4 do
-      if digit[y][x] >= 3 then
+  for y=1,height do
+    for x=1,width do
+      if digit[y][x] >= (colors and 1 or 3) then
+        if colors then
+          can:Foreground(colors[digit[y][x]])
+        end
         can:Box(
           left+pixel*(x-1),
           left+pixel*x-1,
@@ -68,6 +71,7 @@ local function drawdigit(can,set,number,xcenter,ycenter)
     end
   end
 end
+
 
 --Function to clear the canvas with a given color.
 function draw.clear(can, bgcolor)
@@ -99,16 +103,27 @@ do
   end
 end
 
-function draw.flippedcard(can,row,col,card)
+do
+  local cardback=cd.EncodeColor(unpack(colors.rust))
+  local cardedge=cd.EncodeColor(unpack(colors.darkrust))
+  local ldcolors={
+    cd.EncodeColor(unpack(colors.grey)),
+    cd.EncodeColor(unpack(colors.white)),
+    cd.EncodeColor(unpack(colors.black)),
+    }
+  local edge=scard/11
+  function draw.flippedcard(can,row,col,card)
 
-  local left=(scard+sizes.cardgap)*(col-1)
-  local top = canheight-(scard+sizes.cardgap)*(row-1)
-  local right, bottom= left+scard, top-scard
-  can:Foreground(cd.EncodeColor(0,64,0))
-  can:Box(left, right-1, bottom, top-1)
-  can:Foreground(cd.EncodeColor(232,232,0))
-  drawdigit(can,'small',card,left+scard/2,top-scard/2)
-
+    local left=(scard+sizes.cardgap)*(col-1)
+    local top = canheight-(scard+sizes.cardgap)*(row-1)
+    local right, bottom= left+scard, top-scard
+    local edge=scard/20
+    can:Foreground(cardedge)
+    can:Box(left, right-1, bottom, top-1)
+    can:Foreground(cardback)
+    can:Box(left+edge, right-edge-1, bottom+edge, top-edge-1)
+    drawdigit(can,'large',card,left+scard/2,top-scard/2,scard/2,ldcolors)
+  end
 end
 
 --Function for drawing an individual card.
@@ -148,13 +163,13 @@ function draw.card(can,row,col,card)
   can:Mark(left+third/2, top-third/2)
 
   can:Foreground(card[1])
-  drawdigit(can,'small',1,right-third/2,top-third/2)
+  drawdigit(can,'small',1,right-third/2,top-third/2,memosize)
 
   can:Foreground(card[2])
-  drawdigit(can,'small',2,left+third/2,bottom+third/2)
+  drawdigit(can,'small',2,left+third/2,bottom+third/2,memosize)
 
   can:Foreground(card[3])
-  drawdigit(can,'small',3,right-third/2,bottom+third/2)
+  drawdigit(can,'small',3,right-third/2,bottom+third/2,memosize)
 end
 
 function draw.cards(can,cardcolors,flipped)

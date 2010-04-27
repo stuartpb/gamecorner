@@ -122,7 +122,7 @@ for row=1,lines do
 
   probabilities[row]={}
   cardcolors[row]={}
-  revealed[row]={1}
+  revealed[row]={}
 
   for col=1, lines do
     probabilities[row][col]={}
@@ -158,7 +158,7 @@ local frontbuffer,backbuffer
 
 --Function that updates the heatmap whenver the values change.
 local function updateheatmap()
-  calculate_probs(model,probabilities)
+  calculate_probs(model,revealed,probabilities)
   generate_colors(probabilities,cardcolors,cd.EncodeColor)
   backbuffer:Activate()
   draw.cards(backbuffer,cardcolors,revealed)
@@ -210,7 +210,7 @@ local textboxes = make_controls(layout,model,updateheatmap,defaults)
 -- Data initialization
 -------------------------------------------------------------------------------
 
-calculate_probs(model,probabilities)
+calculate_probs(model,revealed,probabilities)
 generate_colors(probabilities,cardcolors,cd.EncodeColor)
 
 -------------------------------------------------------------------------------
@@ -226,7 +226,6 @@ local mainwin = iup.dialog{
   resize="no",
   startfocus=textboxes.columns[1].sum;
   layout}
-grobal=mainwin
 --show the main window
 mainwin:show()
 --Relinquish flow control to IUP
