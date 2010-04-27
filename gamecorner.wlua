@@ -122,7 +122,7 @@ for row=1,lines do
 
   probabilities[row]={}
   cardcolors[row]={}
-  revealed[row]={}
+  revealed[row]={1}
 
   for col=1, lines do
     probabilities[row][col]={}
@@ -155,6 +155,16 @@ local iupcanvas=iup.canvas{
 --Declare variables for buffers that are initialized
 --after the canvas is mapped.
 local frontbuffer,backbuffer
+
+--Function that updates the heatmap whenver the values change.
+local function updateheatmap()
+  calculate_probs(model,probabilities)
+  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  backbuffer:Activate()
+  draw.cards(backbuffer,cardcolors,revealed)
+  backbuffer:Flush()
+end
+
 function iupcanvas:map_cb()
   --Create the front buffer (which is never really used,
   --but that's no reason not to keep it referenced)
@@ -165,14 +175,14 @@ function iupcanvas:map_cb()
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
 
   --Give the canvas the rest of its callbacks
-  cancb(iupcanvas,backbuffer,selection,probabilities)
+  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap)
 end
 
 function iupcanvas:action()
   backbuffer:Activate()
   draw.clear(backbuffer,dlgbgcolor)
   draw.bars(backbuffer)
-  draw.cards(backbuffer,cardcolors)
+  draw.cards(backbuffer,cardcolors,revealed)
   backbuffer:Flush()
 end
 
@@ -188,15 +198,6 @@ local layout = iup.cbox{
       + sizes.controls.gap*2
       + sizes.controls.height*2),
   iupcanvas}
-
---Function that updates the heatmap whenver the values change.
-local function updateheatmap()
-  calculate_probs(model,probabilities)
-  generate_colors(probabilities,cardcolors,cd.EncodeColor)
-  backbuffer:Activate()
-  draw.cards(backbuffer,cardcolors)
-  backbuffer:Flush()
-end
 
 -------------------------------------------------------------------------------
 -- Control creation
@@ -225,6 +226,7 @@ local mainwin = iup.dialog{
   resize="no",
   startfocus=textboxes.columns[1].sum;
   layout}
+grobal=mainwin
 --show the main window
 mainwin:show()
 --Relinquish flow control to IUP

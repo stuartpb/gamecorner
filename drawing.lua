@@ -50,10 +50,11 @@ local memosize=scard/4
 --Define the table to store the module's functions in.
 local draw={}
 
-local function drawsmalldigit(can,number,xcenter,ycenter)
-  local pixel = memosize/5
-  local left, top = xcenter-pixel*2, ycenter+pixel*2.5
-  local digit = digits.small[number]
+local function drawdigit(can,set,number,xcenter,ycenter)
+  local digit = digits[set][number]
+  local width, height = #digit[1], #digit
+  local pixel = memosize/height
+  local left, top = xcenter-pixel*(width/2), ycenter+pixel*(height/2)
 
   for y=1,5 do
     for x=1,4 do
@@ -98,6 +99,18 @@ do
   end
 end
 
+function draw.flippedcard(can,row,col,card)
+
+  local left=(scard+sizes.cardgap)*(col-1)
+  local top = canheight-(scard+sizes.cardgap)*(row-1)
+  local right, bottom= left+scard, top-scard
+  can:Foreground(cd.EncodeColor(0,64,0))
+  can:Box(left, right-1, bottom, top-1)
+  can:Foreground(cd.EncodeColor(232,232,0))
+  drawdigit(can,'small',card,left+scard/2,top-scard/2)
+
+end
+
 --Function for drawing an individual card.
 function draw.card(can,row,col,card)
   local resx, resy = can:Pixel2MM(1,1)
@@ -135,19 +148,24 @@ function draw.card(can,row,col,card)
   can:Mark(left+third/2, top-third/2)
 
   can:Foreground(card[1])
-  drawsmalldigit(can,1,right-third/2,top-third/2)
+  drawdigit(can,'small',1,right-third/2,top-third/2)
 
   can:Foreground(card[2])
-  drawsmalldigit(can,2,left+third/2,bottom+third/2)
+  drawdigit(can,'small',2,left+third/2,bottom+third/2)
 
   can:Foreground(card[3])
-  drawsmalldigit(can,3,right-third/2,bottom+third/2)
+  drawdigit(can,'small',3,right-third/2,bottom+third/2)
 end
 
-function draw.cards(can,cardcolors)
+function draw.cards(can,cardcolors,flipped)
   for row_index, row in ipairs(cardcolors) do
     for col_index, cell in ipairs(row) do
-      draw.card(can,row_index, col_index, cell)
+      local flip = flipped[row_index][col_index]
+      if flip then
+        draw.flippedcard(can,row_index,col_index, flip)
+      else
+        draw.card(can,row_index, col_index, cell)
+      end
     end
   end
 end

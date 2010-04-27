@@ -1,5 +1,12 @@
 return {
   small={
+    [0]={ --this should never get used but for completion's sake
+      {0,3,3,3,0},
+      {3,3,3,3,3},
+      {3,3,3,3,3},
+      {3,3,3,3,3},
+      {0,3,3,3,0},
+    },
     {
       {3,3,3,0},
       {0,3,3,0},

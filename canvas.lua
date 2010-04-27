@@ -39,7 +39,7 @@ local function oncard(x,y)
     local right=left+scard
     local bottom=top+scard
 
-    if x>=left and x<=right and y>=bottom and y<=top
+    if x>=left and x<=right and y<=bottom and y>=top
     then
       local sector=x > left+half and 1 or 0
 
@@ -56,16 +56,15 @@ end
 -------------------------------------------------------------------------------
 
 --Sets callbacks for the canvas.
-return function(iupcanvas,cdcan,selection,probs)
+return function(iupcanvas,cdcan,selection,colors,updateheatmap)
 
+local ballbs=''
   function iupcanvas:motion_cb(x,y,status)
-    local lmb_pressed=tonumber(iup.isbutton1(status))==1
-
+    local lmb_pressed=iup.isbutton1(status)
     local current=selection.focus
     local revealed=selection.revealed
 
     local sector, row, column = oncard(x,y)
-
     local swapbuffers
 
     --if the mouse button is currently pressed
@@ -80,7 +79,7 @@ return function(iupcanvas,cdcan,selection,probs)
         else
           --draw the card like nothing was on it
           draw.card(cdcan,current.row,current.column,
-            probs[current.row][current.column])
+            colors[current.row][current.column])
         end
 
         swapbuffers=true
@@ -96,7 +95,7 @@ return function(iupcanvas,cdcan,selection,probs)
       then
         --replace the card
         draw.card(cdcan,current.row,current.column,
-          probs[current.row][current.column])
+          colors[current.row][current.column])
         swapbuffers=true
       end
 
@@ -117,14 +116,18 @@ return function(iupcanvas,cdcan,selection,probs)
     if swapbuffers then cdcan:Flush() end
   end
 
-  function iupcanvas:button_cb(_,_,x,y,status)
+  function iupcanvas:button_cb(button,pressed,x,y,status)
     local current=selection.focus
     local revealed=selection.revealed
 
-    local lmb_pressed=tonumber(iup.isbutton1(status))==1
+    local lmb_pressed
+    if button==iup.BUTTON1 then
+      lmb_pressed = pressed==1
+    else
+      lmb_pressed = iup.isbutton1(status)
+    end
 
     local sector, row, column = oncard(x,y)
-
     --if the mouse button was held before this
     if current.selected then
       --if the left mouse button is being released
@@ -144,15 +147,16 @@ return function(iupcanvas,cdcan,selection,probs)
             last=current
           }
 
-          --mark this card as
+          --set this card's flipped value
           revealed[row][column]=sector
-          --draw.flippedcard(cdcan,row,column,sector)
-          --swapbuffers=true
+          --recalculate the odds with this change
+          --and display them
+          updateheatmap()
         end
       end
 
     else --if the left mouse button was not already down
-      --if the cursor was on a valid card
+      --if the cursor was on a valid card ballbs=ballbs..(current.selected and 'B' or "b")
       if sector and not revealed[row][column] then
         current.row = row
         current.column = column
@@ -171,7 +175,7 @@ return function(iupcanvas,cdcan,selection,probs)
 
     if focus.sector then
       draw.card(cdcan,focus.row,focus.column,
-        probs[focus.row][focus.column])
+        colors[focus.row][focus.column])
       cdcan:Flush()
     end
 
