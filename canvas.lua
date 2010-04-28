@@ -56,7 +56,7 @@ end
 -------------------------------------------------------------------------------
 
 --Sets callbacks for the canvas.
-return function(iupcanvas,cdcan,selection,colors,updateheatmap)
+return function(iupcanvas,cdcan,selection,colors,updateheatmap,undobutton)
 
   function iupcanvas:motion_cb(x,y,status)
     local lmb_pressed=iup.isbutton1(status)
@@ -150,6 +150,7 @@ return function(iupcanvas,cdcan,selection,colors,updateheatmap)
           --recalculate the odds with this change
           --and display them
           updateheatmap()
+          undobutton.active="YES"
         end
       end
 

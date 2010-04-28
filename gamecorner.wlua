@@ -61,6 +61,10 @@ local menu = require "menu"
 
 --Bring in the callbacks for the canvas
 local cancb = require "canvas"
+
+--get the function to make the button to undo selection
+local makebutton= require "flipping.undobutton"
+
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
@@ -158,6 +162,8 @@ local function updateheatmap()
   backbuffer:Flush()
 end
 
+local undobutton=makebutton(selection,updateheatmap)
+
 function iupcanvas:map_cb()
   --Create the front buffer (which is never really used,
   --but that's no reason not to keep it referenced)
@@ -168,7 +174,7 @@ function iupcanvas:map_cb()
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
 
   --Give the canvas the rest of its callbacks
-  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap)
+  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap,undobutton)
 end
 
 function iupcanvas:action()
@@ -198,6 +204,7 @@ local layout = iup.cbox{
 
 --Make all the controls and place them into the layout
 local textboxes = make_controls(layout,model,updateheatmap,defaults)
+iup.Append(layout,undobutton)
 
 -------------------------------------------------------------------------------
 -- Data initialization
