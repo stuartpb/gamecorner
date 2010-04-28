@@ -73,19 +73,12 @@ local defaults={
   voltorb=0
 }
 
-local dlgbgcolor
-do
-  --grab strings for dialog's red, green, and blue values
-  local bgcolors={
-    string.match(iup.GetGlobal"DLGBGCOLOR",
-      "^(%d+) (%d+) (%d+)$")}
+local dlgbgcolors={
+  string.match(iup.GetGlobal"DLGBGCOLOR",
+    "^(%d+) (%d+) (%d+)$")}
 
-  --convert them to numbers
-  for _, each in pairs(bgcolors) do each=tonumber(each) end
-
-  --encode the color
-  dlgbgcolor = cd.EncodeColor(unpack(bgcolors))
-end
+--convert them to numbers
+for _, each in pairs(dlgbgcolors) do each=tonumber(each) end
 
 -------------------------------------------------------------------------------
 -- Central table construction
@@ -132,11 +125,11 @@ for row=1,lines do
       for sub=0,4 do
         if sub~=4 then --because 4 is for the center subsquare only
           probabilities[row][col][sub]=.25
-          cardcolors[row][col][sub]=dlgbgcolor
+          cardcolors[row][col][sub]={0,0,0}
         end
-        cardcolors[row][col].subsquares[sub]=dlgbgcolor
+        cardcolors[row][col].subsquares[sub]={0,0,0}
       end
-      cardcolors[row][col].overall=dlgbgcolor
+      cardcolors[row][col].overall={0,0,0}
     end
   end
 end
@@ -180,7 +173,7 @@ end
 
 function iupcanvas:action()
   backbuffer:Activate()
-  draw.clear(backbuffer,dlgbgcolor)
+  draw.clear(backbuffer,dlgbgcolors)
   draw.bars(backbuffer)
   draw.cards(backbuffer,cardcolors,revealed)
   backbuffer:Flush()

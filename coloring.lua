@@ -95,6 +95,11 @@ local function lin(position, zero, one)
   return zero * (1-position) + one * position
 end
 
+--Function to set the indices in a table.
+local function setrgb(t,r,g,b)
+  t[1]=r; t[2]=g; t[3]=b
+end
+
 -------------------------------------------------------------------------------
 -- Interface function
 -------------------------------------------------------------------------------
@@ -107,22 +112,18 @@ return function (
           -- is a Voltorb) through 3 (with 1, 2 and 3 representing the
           -- probability of the card being each of those numbers).
           -- Further information can be found in probabilities.lua.
-  cardcolors, -- Parameter 2: Table for output.
+  cardcolors -- Parameter 2: Table for output.
           -- A table containing 5 tables (one for each row from top to
           -- bottom), each containing 5 further tables (one for each
           -- column's card in that row). The tables for the cards contain
-          -- the colors for several parts of the card, with the value at
-          -- "overall" being the overall color of the card (the background),
-          -- the values at indices 0 through 3 being the colors for the
-          -- circle, 1, 2, and 3 (representing the numbers and Voltorb
+          -- tables for the colors for several parts of the card, with the
+          -- value at "overall" being the overall color of the card (the
+          -- background), the values at indices 0 through 3 being the colors
+          -- for the circle, 1, 2, and 3 (representing the numbers and Voltorb
           -- probabilities), and a table at "subsquares" with 5 indices from
-          -- 0 through 4, with 0 through 3 representing the background sections
-          -- behind their respective numbers and 4 representing the middle of
-          -- the card.
-  encodergb -- Parameter 3: Function for output.
-          -- A function taking red, green, and blue values from 0 to 255 and
-          -- returning a single value to use for the color. Essentially just
-          -- cd.EncodeColor passed in as an argument to the function.
+          -- 0 through 4, with 0 through 3 representing the background
+          -- sections behind their respective numbers and 4 representing
+          -- the middle of the card.
   )
 
   --For each row
@@ -142,7 +143,7 @@ return function (
 
       --Get the overall background color for this card
       local r,g,b = heatrgb(cardprobs)
-      cell.overall = encodergb(r,g,b)
+      setrgb(cell.overall,r,g,b)
 
       --Function returning the r, g, and b between the card's background
       --color and white based on the fraction taken in.
@@ -167,12 +168,12 @@ return function (
 
       --Set the colors for all subsquares
       for i=0,4 do
-        cell.subsquares[i]=encodergb(darkrgb(.8))
+        setrgb(cell.subsquares[i],darkrgb(.8))
       end
 
       --Set the colors for all possibilities
       for num=0, 3 do
-        cell[num]=encodergb(dbrgb(cardprobs[num]))
+        setrgb(cell[num],dbrgb(cardprobs[num]))
       end
     end
   end
