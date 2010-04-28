@@ -32,23 +32,41 @@ The probability calculation algorithm.
 -- my naive algorithm. A smart algorithm would have a much smarter approach.
 
 --The data for the average card's probability for each row and column.
-local rowprobs, colprobs={},{}
+local lineprobs={rows={},columns={}}
 
 ---- Functions --------------------------------------------
 
 --Calculate the probabilities for all card in each row and column.
-local function calculate_rcprobs(rows, cols)
+local function calculate_rcprobs(model, reveals)
 
   --For both rows and columns
-  for rcprobs, data in pairs{[rowprobs]=rows,[colprobs]=cols} do
+  for _, axis in pairs{"rows","columns"} do
+    local data=model[axis]
+    local rcprobs=lineprobs[axis]
+
     --For each row/column
     for line=1, lines do
 
+      local flipped={[0]=0,0,0,0}
+      local fliptotal=0
+      for i=1, lines do
+        local card
+        if axis=="rows" then
+          card=reveals[line][i]
+        else
+          card=reveals[i][line]
+        end
+        if card then flipped[card]=flipped[card]+1 fliptotal=fliptotal+1 end
+      end
+
       --The number of cards with a number on them
       local nonzero = lines-data[line].voltorb
+      local hidden= nonzero-fliptotal+flipped[0]
 
       --The average number on each card with a number on it
-      local average = data[line].sum/(nonzero)
+      local average = (data[line].sum
+        -flipped[1]-flipped[2]*2
+        -flipped[3]*3)/(hidden)
 
       --Function to calculate how close the average is to the parameter
       --(bottoming out at 0)
@@ -61,19 +79,31 @@ local function calculate_rcprobs(rows, cols)
       local twoodds = oneoff(2)
       local threeodds = oneoff(3)
 
-      --The probability for each row/column:
-      rcprobs[line]={
+      local open=lines-fliptotal
 
-        --The probability of a Voltorb is as simple as the number of Voltorbs
-        --in the row or column out of the number of cards in a row/column
-        [0]=data[line].voltorb/lines,
+      --if every card in this line has been flipped,
+      --set this line's probabilities exactly
+      if open==0 then
+        rcprobs[line]={}
+        for i=0,3 do
+          rcprobs[line][i]=flipped[i]/lines
+        end
 
-        --The probability of each number is the probability of that number
-        --within the probability of the card being a number at all
-        [1]=oneodds*(nonzero/lines),
-        [2]=twoodds*(nonzero/lines),
-        [3]=threeodds*(nonzero/lines),
-      }
+      else
+        --The probability for each row/column:
+        rcprobs[line]={
+
+          --The probability of a Voltorb is as simple as the number of Voltorbs
+          --in the row or column out of the number of cards in a row/column
+          [0]=data[line].voltorb/open,
+
+          --The probability of each number is the probability of that number
+          --within the probability of the card being a number at all
+          [1]=oneodds*(nonzero/lines),
+          [2]=twoodds*(nonzero/lines),
+          [3]=threeodds*(nonzero/lines),
+        }
+      end
     end
   end
 end
@@ -95,7 +125,17 @@ return function (
           -- (So, to get the number of Voltorb in the second row from the top,
           -- you would check "model.rows[2].voltorb".)
 
-  probs -- Parameter 2: Table for output.
+  revealed, --Parameter 2: Table of input.
+          -- A table containing 5 tables (one for each row from top to
+          -- bottom), with any revealed cards being at the index of their
+          -- column in this row. The revealed value on the card is represented
+          -- as a number, with 0 meaning Voltorb. If an index is nil, it means
+          -- that that card has not been flipped.
+
+          -- For example, if the card at row 2, column 4 had been revealed
+          -- as a Voltorb, it would be represented as revealed[2][4] = 0.
+
+  probs -- Parameter 3: Table for output.
           -- A table containing 5 tables (one for each row from top to
           -- bottom), each containing 5 further tables (one for each
           -- column's card in that row). The tables for the cards contain 4
@@ -134,7 +174,7 @@ return function (
   --Implementation for the naive algorithm:
 
   --calculate the probabilities for these rows and columns
-  calculate_rcprobs(model.rows,model.columns)
+  calculate_rcprobs(model,revealed)
 
   --For every row,
   for row=1,lines do
@@ -143,7 +183,9 @@ return function (
       --for every possibility,
       for num=0,3 do
         --the probability is the average of the row and column's probability
-        probs[row][col][num]=rowprobs[row][num]*.5+colprobs[col][num]*.5
+        probs[row][col][num]=
+          lineprobs.rows[row][num]*.5
+          + lineprobs.columns[col][num]*.5
       end
     end
   end
