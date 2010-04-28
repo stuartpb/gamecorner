@@ -56,7 +56,7 @@ end
 -------------------------------------------------------------------------------
 
 --Sets callbacks for the canvas.
-return function(iupcanvas,cdcan,selection,colors,updateheatmap)
+return function(iupcanvas,cdcan,selection,colors,updateheatmap,undobutton)
 
   function iupcanvas:motion_cb(x,y,status)
     local lmb_pressed=iup.isbutton1(status)
@@ -74,7 +74,7 @@ return function(iupcanvas,cdcan,selection,colors,updateheatmap)
         if sector==current.sector
         and row==current.row and column==current.column
         then
-          --draw.cardfocus(srow,scol,sector,true)
+          draw.cardfocus(cdcan,row,column,sector,true)
         else
           --draw the card like nothing was on it
           draw.card(cdcan,current.row,current.column,
@@ -89,21 +89,27 @@ return function(iupcanvas,cdcan,selection,colors,updateheatmap)
       --if the cursor was previously within a card that it is not
       if current.sector and (
         current.row~=row
-          or current.column~=column
-          or current.sector~=sector)
+          or current.column~=column)
       then
         --replace the card
         draw.card(cdcan,current.row,current.column,
           colors[current.row][current.column])
         swapbuffers=true
       end
+
       if sector and revealed[row][column] then
         current.sector=nil
         current.row=nil
         current.column=nil
       else
-        if sector then
-          --draw.cardfocus(srow,scol,sector)
+        --if entering a new sector/card
+        if sector and (
+          current.row~=row
+            or current.column~=column
+            or current.sector~=sector)
+        then
+          draw.cardfocus(cdcan,row,column,sector)
+          swapbuffers=true
         end
         current.sector=sector
         current.row=row
@@ -150,6 +156,7 @@ return function(iupcanvas,cdcan,selection,colors,updateheatmap)
           --recalculate the odds with this change
           --and display them
           updateheatmap()
+          undobutton.active="YES"
         end
       end
 
@@ -162,7 +169,8 @@ return function(iupcanvas,cdcan,selection,colors,updateheatmap)
 
         if lmb_pressed then
           current.selected=true
-          --draw.cardfocus(srow,scol,sector,true)
+          draw.cardfocus(cdcan,row,column,sector,true)
+          cdcan:Flush()
         end
       end
     end

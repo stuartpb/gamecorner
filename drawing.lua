@@ -40,6 +40,20 @@ local third = scard/3
 local memosize=scard/4
 
 -------------------------------------------------------------------------------
+-- Helper functions
+-------------------------------------------------------------------------------
+
+--Encodes a table of RGB values into a CD color.
+local function encodect(ct)
+  return cd.EncodeColor(unpack(ct))
+end
+
+--Sets a table of RGB values as a canvas's foreground color.
+local function foregroundct(can,ct)
+  can:Foreground(encodect(ct))
+end
+
+-------------------------------------------------------------------------------
 -- Module definition
 -------------------------------------------------------------------------------
 
@@ -74,8 +88,8 @@ end
 
 
 --Function to clear the canvas with a given color.
-function draw.clear(can, bgcolor)
-  can:Background(bgcolor)
+function draw.clear(can, bgcolort)
+  can:Background(encodect(bgcolort))
   can:Clear()
 end
 
@@ -85,7 +99,7 @@ do
 
   --Exchange all color sets for CD encoded colors
   for line, rgbtable in pairs(colors.lines) do
-    barcolors[line]=cd.EncodeColor(unpack(rgbtable))
+    barcolors[line]=encodect(rgbtable)
   end
 
   function draw.bars(can)
@@ -104,25 +118,91 @@ do
 end
 
 do
-  local cardback=cd.EncodeColor(unpack(colors.rust))
-  local cardedge=cd.EncodeColor(unpack(colors.darkrust))
+  local cardback=encodect(colors.rust)
+  local cardedge=encodect(colors.darkrust)
   local ldcolors={
-    cd.EncodeColor(unpack(colors.grey)),
-    cd.EncodeColor(unpack(colors.white)),
-    cd.EncodeColor(unpack(colors.black)),
+    encodect(colors.grey),
+    encodect(colors.white),
+    encodect(colors.black),
     }
-  local edge=scard/11
+  local edge=scard/20
+
   function draw.flippedcard(can,row,col,card)
 
     local left=(scard+sizes.cardgap)*(col-1)
     local top = canheight-(scard+sizes.cardgap)*(row-1)
     local right, bottom= left+scard, top-scard
-    local edge=scard/20
+
     can:Foreground(cardedge)
-    can:Box(left, right-1, bottom, top-1)
+    can:Box(left, right-1,
+      bottom, top-1)
+
     can:Foreground(cardback)
-    can:Box(left+edge, right-edge-1, bottom+edge, top-edge-1)
-    drawdigit(can,'large',card,left+scard/2,top-scard/2,scard/2,ldcolors)
+    can:Box(left+edge, right-edge-1,
+      bottom+edge, top-edge-1)
+
+    drawdigit(can,'large',card,
+      left+scard/2,top-scard/2,
+      scard/2,ldcolors)
+  end
+end
+
+do
+  --Used for background of hovered sector.
+  local darkgreen=encodect(colors.darkgreen)
+  --Used for numbers in non-numbered sectors.
+  local lightgreen=encodect(colors.lightgreen)
+  --Used for backgrounds of non-hovered sectors.
+  local grey=encodect(colors.grey)
+  --Used for edges of non-hovered sectors.
+  local darkgrey=encodect(colors.darkgrey)
+  --Used for number of hovered sector.
+  local gold=encodect(colors.gold)
+  --Used for pushed numbers and edge of hovered sector.
+  local black=encodect(colors.black)
+
+  local edge=scard/40
+
+  function draw.cardfocus(can,row,col,sector,pressed)
+
+    local cardleft=(scard+sizes.cardgap)*(col-1)
+    local cardhmiddle=cardleft+scard/2
+    local cardright=cardleft+scard
+
+    local cardtop = canheight-(scard+sizes.cardgap)*(row-1)
+    local cardvmiddle=cardtop-scard/2
+    local cardbottom=cardtop-scard
+
+    for quad=0,3 do
+      local left, right, bottom,top
+      if quad%2==0 then
+        left=cardleft
+        right=cardhmiddle
+      else
+        left=cardhmiddle
+        right=cardright
+      end
+      if quad<2 then
+        top=cardtop
+        bottom=cardvmiddle
+      else
+        top=cardvmiddle
+        bottom=cardbottom
+      end
+
+      can:Foreground(quad==sector and black or darkgrey)
+      can:Box(left, right-1,
+        bottom, top-1)
+
+      can:Foreground(quad==sector and darkgreen or grey)
+      can:Box(left+edge, right-edge-1,
+        bottom+edge, top-edge-1)
+
+      can:Foreground(quad==sector and (pressed and black or gold) or lightgreen)
+      drawdigit(can,'large',quad,
+        left+scard/4,top-scard/4,
+        scard/4)
+    end
   end
 end
 
@@ -141,34 +221,34 @@ function draw.card(can,row,col,card)
   local left=(scard+sizes.cardgap)*(col-1)
   local top = canheight-(scard+sizes.cardgap)*(row-1)
   local right, bottom= left+scard, top-scard
-  can:Foreground(card.overall)
+  foregroundct(can,card.overall)
   can:Box(left, right-1, bottom, top-1)
 
-  can:Foreground(card.subsquares[0])
+  foregroundct(can,card.subsquares[0])
   can:Box(left, left+third-1, top-third, top-1)
 
-  can:Foreground(card.subsquares[1])
+  foregroundct(can,card.subsquares[1])
   can:Box(right-third, right-1, top-third, top-1)
 
-  can:Foreground(card.subsquares[2])
+  foregroundct(can,card.subsquares[2])
   can:Box(left, left+third-1, bottom, bottom+third-1)
 
-  can:Foreground(card.subsquares[3])
+  foregroundct(can,card.subsquares[3])
   can:Box(right-third, right-1, bottom, bottom+third-1)
 
-  can:Foreground(card.subsquares[4])
+  foregroundct(can,card.subsquares[4])
   can:Box(left+third, right-third-1, bottom+third, top-third-1)
 
-  can:Foreground(card[0])
+  foregroundct(can,card[0])
   can:Mark(left+third/2, top-third/2)
 
-  can:Foreground(card[1])
+  foregroundct(can,card[1])
   drawdigit(can,'small',1,right-third/2,top-third/2,memosize)
 
-  can:Foreground(card[2])
+  foregroundct(can,card[2])
   drawdigit(can,'small',2,left+third/2,bottom+third/2,memosize)
 
-  can:Foreground(card[3])
+  foregroundct(can,card[3])
   drawdigit(can,'small',3,right-third/2,bottom+third/2,memosize)
 end
 
