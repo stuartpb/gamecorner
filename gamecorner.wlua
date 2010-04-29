@@ -59,6 +59,12 @@ local voltorb_icon = require "images.voltorb"
 --Bring in the window's menu
 local menu = require "menu"
 
+--Bring in the callbacks for the canvas
+local cancb = require "canvas"
+
+--get the function to make the button to undo selection
+local makebutton= require "flipping.undobutton"
+
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
@@ -71,24 +77,18 @@ local defaults={
   voltorb=0
 }
 
-local dlgbgcolor
-do
-  --grab strings for dialog's red, green, and blue values
-  local bgcolors={
-    string.match(iup.GetGlobal"DLGBGCOLOR",
-      "^(%d+) (%d+) (%d+)$")}
+local dlgbgcolors={
+  string.match(iup.GetGlobal"DLGBGCOLOR",
+    "^(%d+) (%d+) (%d+)$")}
 
-  --convert them to numbers
-  for _, each in pairs(bgcolors) do each=tonumber(each) end
-
-  --encode the color
-  dlgbgcolor = cd.EncodeColor(unpack(bgcolors))
-end
+--convert them to numbers
+for _, each in pairs(dlgbgcolors) do each=tonumber(each) end
 
 -------------------------------------------------------------------------------
 -- Central table construction
 -------------------------------------------------------------------------------
 
+--Table for data for row and column sums and Voltorb counts.
 local model={rows={},columns={}}
 --initialize model data
 for line=1, lines do
@@ -103,10 +103,24 @@ local probabilities={}
 --table determined cards get stored in.
 local cardcolors={}
 
+--table of revealed cards
+local revealed={}
+
+--Table storing card selection info.
+local selection={
+  --Table storing the current information for the cursor state
+  --in terms of card selection
+  focus={},
+  revealed=revealed
+}
+
 --Create all tables for each row and card.
 for row=1,lines do
+
   probabilities[row]={}
   cardcolors[row]={}
+  revealed[row]={}
+
   for col=1, lines do
     probabilities[row][col]={}
     cardcolors[row][col]={subsquares={}}
@@ -115,11 +129,11 @@ for row=1,lines do
       for sub=0,4 do
         if sub~=4 then --because 4 is for the center subsquare only
           probabilities[row][col][sub]=.25
-          cardcolors[row][col][sub]=dlgbgcolor
+          cardcolors[row][col][sub]={0,0,0}
         end
-        cardcolors[row][col].subsquares[sub]=dlgbgcolor
+        cardcolors[row][col].subsquares[sub]={0,0,0}
       end
-      cardcolors[row][col].overall=dlgbgcolor
+      cardcolors[row][col].overall={0,0,0}
     end
   end
 end
@@ -138,6 +152,18 @@ local iupcanvas=iup.canvas{
 --Declare variables for buffers that are initialized
 --after the canvas is mapped.
 local frontbuffer,backbuffer
+
+--Function that updates the heatmap whenver the values change.
+local function updateheatmap()
+  calculate_probs(model,revealed,probabilities)
+  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  backbuffer:Activate()
+  draw.cards(backbuffer,cardcolors,revealed)
+  backbuffer:Flush()
+end
+
+local undobutton=makebutton(selection,updateheatmap)
+
 function iupcanvas:map_cb()
   --Create the front buffer (which is never really used,
   --but that's no reason not to keep it referenced)
@@ -146,37 +172,31 @@ function iupcanvas:map_cb()
   --double-buffer to eliminate flickering.
   --In testing this didn't change memory consumption.
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
+
+  --Give the canvas the rest of its callbacks
+  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap,undobutton)
 end
 
 function iupcanvas:action()
   backbuffer:Activate()
-  draw.clear(backbuffer,dlgbgcolor)
+  draw.clear(backbuffer,dlgbgcolors)
   draw.bars(backbuffer)
-  draw.cards(backbuffer,cardcolors)
+  draw.cards(backbuffer,cardcolors,revealed)
   backbuffer:Flush()
 end
 
 --Layout Construction
 local layout = iup.cbox{
   rastersize=sizes.wxh(
-    canvassize --
+    canvassize -- the width of the canvas
       + sizes.margin*2 -- plus the left and right margin
-      + sizes.rspace, -- plus the arbitrary amount of space
-                      -- for the controls to the right
+      + sizes.controls.gap -- plus the gap between the canvas and controls
+      + sizes.controls.width, --plus the width of the controls
     canvassize
       + sizes.margin*2
       + sizes.controls.gap*2
-      + sizes.controls.textbox.height*2),
+      + sizes.controls.height*2),
   iupcanvas}
-
---Function that updates the heatmap whenver the values change.
-local function updateheatmap()
-  calculate_probs(model,probabilities)
-  generate_colors(probabilities,cardcolors,cd.EncodeColor)
-  backbuffer:Activate()
-  draw.cards(backbuffer,cardcolors)
-  backbuffer:Flush()
-end
 
 -------------------------------------------------------------------------------
 -- Control creation
@@ -184,12 +204,13 @@ end
 
 --Make all the controls and place them into the layout
 local textboxes = make_controls(layout,model,updateheatmap,defaults)
+iup.Append(layout,undobutton)
 
 -------------------------------------------------------------------------------
 -- Data initialization
 -------------------------------------------------------------------------------
 
-calculate_probs(model,probabilities)
+calculate_probs(model,revealed,probabilities)
 generate_colors(probabilities,cardcolors,cd.EncodeColor)
 
 -------------------------------------------------------------------------------
@@ -201,6 +222,8 @@ local mainwin = iup.dialog{
   icon=voltorb_icon,
   title="Game Corner",
   menu=menu,
+  --since we really have NO support for resizing we just flat out disable it
+  resize="no",
   startfocus=textboxes.columns[1].sum;
   layout}
 --show the main window

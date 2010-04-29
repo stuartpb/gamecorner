@@ -99,7 +99,7 @@ samples={
     {0,2,0,0,0},
     {0,1,1,1,2}
   },
-  levolt3={-- without dynamic solving or an offseeting algorithm I had to resort to memos to deduce 0 & 1 exclusive rows
+  levolt3={-- without dynamic solving or an offsetting algorithm I had to resort to memos to deduce 0 & 1 exclusive rows
     {1,1,2,0,0},
     {1,1,0,1,1},
     {1,0,0,1,1},
@@ -119,6 +119,34 @@ samples={
     {2,0,0,1,2},
     {0,2,1,1,1},
     {0,1,0,0,1}
+  },
+  row4voltorb={ --0-5 OMG
+    {3,0,2,2,1},
+    {0,3,0,1,3},
+    {1,1,1,2,2},
+    {0,0,0,0,0},
+    {1,0,1,0,1}
+  },
+  fourthrees={ --a level 2 with a 10-1 column 1 = good times
+    {0,0,1,0,1},
+    {3,1,1,1,0},
+    {3,1,3,0,0},
+    {1,1,1,1,1},
+    {3,0,1,1,1}
+  },
+  twodeduce={
+    {0,0,1,2,0},
+    {0,0,0,0,2},
+    {1,0,2,2,2},
+    {0,1,1,1,2},
+    {0,2,1,1,2}
+  },
+  edgy={
+    {0,0,0,0,1},
+    {3,0,1,1,3},
+    {2,1,0,1,3},
+    {1,1,1,0,3},
+    {1,1,1,1,0}
   },
 }
 
