@@ -26,12 +26,75 @@ The probability calculation algorithm.
 -- "lines" is a global representing the number of rows and columns
 -- defined as 5 in the main script.
 
+--The possible combinations for each number for each number of
+--non-voltorb cards.
+local combosets={}
+
+--Make a table for every possible sum containing the possible sets of cards
+--that could yield that sum.
+for open=1,lines do
+  local sums={}
+
+  --Make a table for each possible sum for this number of non-zero cards.
+  for sum=open, open*3 do
+    sums[sum]={}
+  end
+
+  --Calculate every possible set with these cards and place them
+  --in the table for that sum.
+  for onesend=0,open do
+    for twosend=onesend,open do
+      local sum=0
+      local set={}
+      for i=1,open do
+        local thiscard= i>twosend and 3 or (i>onesend and 2 or 1)
+        sum=sum+thiscard
+        set[i]=thiscard
+      end
+      local thissum=sums[sum]
+      thissum[#thissum+1]=set
+    end
+  end
+
+  combosets[open]=sums
+end
+
+--Calculate the exact probability for each card for each sum with
+--each number of non-zero cards.
+local cardprobs={}
+for open,sums in pairs(combosets) do
+
+  --The table of sums for this number of non-zero cards.
+  local countprobs={}
+
+  for sum,sets in pairs(sums) do
+
+    --The probability of each card for this sum.
+    local sumprobs={[0]=0,[1]=0,[2]=0,[3]=0}
+
+    --Total all cards that can contribute to this sum.
+    for _,set in pairs(sets) do
+      for _, card in pairs(set) do
+        sumprobs[card]=sumprobs[card]+1
+      end
+    end
+
+    --turn the totals into averages
+    for i=0,3 do
+      sumprobs[i]=sumprobs[i]/(open * #sets)
+    end
+
+    countprobs[sum]=sumprobs
+  end
+
+  cardprobs[open]=countprobs
+end
+
 ---- Variables --------------------------------------------
 
 -- To be clear, this is where we start the implementation-specific stuff for
--- my naive algorithm. A smart algorithm would have a much smarter approach.
+-- this algorithm.
 
---The data for the average card's probability for each row and column.
 local lineprobs={rows={},columns={}}
 
 ---- Functions --------------------------------------------
@@ -47,8 +110,28 @@ local function calculate_rcprobs(model, reveals)
     --For each row/column
     for line=1, lines do
 
-      local flipped={[0]=0,0,0,0}
-      local fliptotal=0
+    --function for reporting errors for this line
+    local function errtable(...)
+      local errrow, errcol
+      if axis == 'rows' then
+        errrow = lines
+        errcol = 'row'
+      elseif axis == 'columns' then
+        errcol = lines
+        errrow = 'column'
+      end
+      return {{errrow,errcol,string.format(...)}}
+    end
+
+      local linesum=data[line].sum
+      local voltorbcount=data[line].voltorb
+
+      --The number of cards with a number on them
+      local nonzero=lines-voltorbcount
+      local open=nonzero
+
+      local flipped={[0]=0,[1]=0,[2]=0,[3]=0}
+
       for i=1, lines do
         local card
         if axis=="rows" then
@@ -56,53 +139,53 @@ local function calculate_rcprobs(model, reveals)
         else
           card=reveals[i][line]
         end
-        if card then flipped[card]=flipped[card]+1 fliptotal=fliptotal+1 end
-      end
-
-      --The number of cards with a number on them
-      local nonzero = lines-data[line].voltorb
-      local hidden= nonzero-fliptotal+flipped[0]
-
-      --The average number on each card with a number on it
-      local average = (data[line].sum
-        -flipped[1]-flipped[2]*2
-        -flipped[3]*3)/(hidden)
-
-      --Function to calculate how close the average is to the parameter
-      --(bottoming out at 0)
-      local function oneoff(num)
-        return 1-math.min(1,math.abs(average-num))
-      end
-
-      --Each number's odds, by this calculation
-      local oneodds = oneoff(1)
-      local twoodds = oneoff(2)
-      local threeodds = oneoff(3)
-
-      local open=lines-fliptotal
-
-      --if every card in this line has been flipped,
-      --set this line's probabilities exactly
-      if open==0 then
-        rcprobs[line]={}
-        for i=0,3 do
-          rcprobs[line][i]=flipped[i]/lines
+        if card then
+          flipped[card]=flipped[card]+1
+          if card==0 then
+            voltorbcount=voltorbcount-1
+          else
+            linesum=linesum-card
+            open=open-1
+          end
         end
+      end
 
+      --if there were more flipped cards than possible
+      if open<0 then
+        return errtable(
+          "Cannot have %i non-zero flipped cards with %i Voltorb",
+          -(open-voltorbcount), voltorbcount)
+
+      elseif open==0 then
+        if voltorbcount==0 then
+          --if every card in this line has been flipped,
+          --set this line's probabilities exactly
+          rcprobs[line]={}
+          for i=0,3 do
+            rcprobs[line][i]=flipped[i]/lines
+          end
+        else
+          rcprobs[line]={[0]=1,0,0,0}
+        end
       else
+        if not cardprobs[open][linesum] then
+          return errtable("%i cards can not add up to %i",
+            open,linesum)
+        else
         --The probability for each row/column:
         rcprobs[line]={
 
-          --The probability of a Voltorb is as simple as the number of Voltorbs
+          --The probability of a Voltorb is as simple as the number of Voltorb
           --in the row or column out of the number of cards in a row/column
-          [0]=data[line].voltorb/open,
+          [0]=voltorbcount/lines,
 
           --The probability of each number is the probability of that number
           --within the probability of the card being a number at all
-          [1]=oneodds*(nonzero/lines),
-          [2]=twoodds*(nonzero/lines),
-          [3]=threeodds*(nonzero/lines),
+          [1]=cardprobs[open][linesum][1]*(nonzero/lines),
+          [2]=cardprobs[open][linesum][2]*(nonzero/lines),
+          [3]=cardprobs[open][linesum][3]*(nonzero/lines),
         }
+        end
       end
     end
   end
@@ -171,10 +254,12 @@ return function (
           -- choice of font, they may even have a line through the middle.
   )
 
-  --Implementation for the naive algorithm:
+  --Implementation for this algorithm:
 
   --calculate the probabilities for these rows and columns
-  calculate_rcprobs(model,revealed)
+  local calcerr = calculate_rcprobs(model,revealed)
+
+  if calcerr then return calcerr end
 
   --For every row,
   for row=1,lines do
