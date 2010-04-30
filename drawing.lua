@@ -208,15 +208,8 @@ end
 
 --Function for drawing an individual card.
 function draw.card(can,row,col,card)
-  local resx, resy = can:Pixel2MM(1,1)
-  local function fontsize(px)
-    return cd.MM2PT * px*resy
-  end
-
-  can:Font(font,cd.BOLD,fontsize(third))
   can:MarkType(cd.CIRCLE)
   can:MarkSize(memosize)
-  can:TextAlignment(cd.CENTER)
 
   local left=(scard+sizes.cardgap)*(col-1)
   local top = canheight-(scard+sizes.cardgap)*(row-1)
@@ -252,14 +245,55 @@ function draw.card(can,row,col,card)
   drawdigit(can,'small',3,right-third/2,bottom+third/2,memosize)
 end
 
-function draw.cards(can,cardcolors,flipped)
+do
+  --Used for backgrounds of cards.
+  local grey=encodect(colors.grey)
+  --Used for edges and subsquares.
+  local darkgrey=encodect(colors.darkgrey)
+  --Used for text.
+  local red=cd.EncodeColor(255,0,0)
+
+  function draw.errcard(can,row_index,col_index,cell)
+    local resx, resy = can:Pixel2MM(1,1)
+    local function fontsize(px)
+      return cd.MM2PT * px*resy
+    end
+
+    can:Font(font,cd.BOLD,fontsize(scard/20))
+    can:MarkType(cd.CIRCLE)
+    can:MarkSize(memosize)
+    can:TextAlignment(cd.CENTER)
+
+    local left=(scard+sizes.cardgap)*(col-1)
+    local top = canheight-(scard+sizes.cardgap)*(row-1)
+    local right, bottom= left+scard, top-scard
+
+    can:Foreground(grey)
+    can:Box(left, right-1, bottom, top-1)
+
+    can:Foreground(darkgrey)
+    for subsq=0,3 do
+      local hoffset=subsq%2==0 and 0 or third*2
+      local voffset=subsq<2 and 0 or third*2
+      can:Box(left+hoffset, right+hoffset-1,
+        bottom+voffset, top+voffset-1)
+    end
+  end
+  function draw.errflipped(can,row_index,col_index,cell)
+  end
+end
+function draw.cards(can,cardcolors,flipped,errmsg)
   for row_index, row in ipairs(cardcolors) do
     for col_index, cell in ipairs(row) do
       local flip = flipped[row_index][col_index]
-      if flip then
-        draw.flippedcard(can,row_index,col_index, flip)
+
+      if errmsg then
       else
-        draw.card(can,row_index, col_index, cell)
+        if flip then
+          draw.flippedcard(can,row_index,col_index, flip)
+        else
+          draw.card(can,row_index, col_index, cell)
+        end
       end
     end
   end

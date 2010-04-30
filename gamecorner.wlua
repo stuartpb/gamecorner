@@ -138,6 +138,10 @@ for row=1,lines do
   end
 end
 
+--If probability calculation encounters errors,
+--the return table will be stored in this variable.
+local probcalcerr
+
 -------------------------------------------------------------------------------
 -- Central object construction
 -------------------------------------------------------------------------------
@@ -153,12 +157,18 @@ local iupcanvas=iup.canvas{
 --after the canvas is mapped.
 local frontbuffer,backbuffer
 
+local function updatedata()
+  probcalcerr=calculate_probs(model,revealed,probabilities)
+  if not probcalcerr then
+    generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  end
+end
+
 --Function that updates the heatmap whenver the values change.
 local function updateheatmap()
-  calculate_probs(model,revealed,probabilities)
-  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  updatedata()
   backbuffer:Activate()
-  draw.cards(backbuffer,cardcolors,revealed)
+  draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
   backbuffer:Flush()
 end
 
@@ -174,14 +184,17 @@ function iupcanvas:map_cb()
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
 
   --Give the canvas the rest of its callbacks
-  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap,undobutton)
+  cancb(iupcanvas,backbuffer,
+    selection,cardcolors,
+    updateheatmap,undobutton,
+    function() return probcalcerr end)
 end
 
 function iupcanvas:action()
   backbuffer:Activate()
   draw.clear(backbuffer,dlgbgcolors)
   draw.bars(backbuffer)
-  draw.cards(backbuffer,cardcolors,revealed)
+  draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
   backbuffer:Flush()
 end
 
@@ -210,8 +223,7 @@ iup.Append(layout,undobutton)
 -- Data initialization
 -------------------------------------------------------------------------------
 
-calculate_probs(model,revealed,probabilities)
-generate_colors(probabilities,cardcolors,cd.EncodeColor)
+updatedata()
 
 -------------------------------------------------------------------------------
 -- Program start
