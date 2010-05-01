@@ -138,6 +138,10 @@ for row=1,lines do
   end
 end
 
+--If probability calculation encounters errors,
+--the return table will be stored in this variable.
+local probcalcerr
+
 -------------------------------------------------------------------------------
 -- Central object construction
 -------------------------------------------------------------------------------
@@ -153,12 +157,32 @@ local iupcanvas=iup.canvas{
 --after the canvas is mapped.
 local frontbuffer,backbuffer
 
+local function updatedata()
+  probcalcerr=calculate_probs(model,revealed,probabilities)
+  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+end
+
+local function drawbase()
+  draw.clear(backbuffer,dlgbgcolors)
+  draw.bars(backbuffer)
+  bloodinthegutter=nil
+end
+
+--tracks if the background needs to be redrawn
+local bloodinthegutter
+local function drawall()
+  if bloodinthegutter then
+    drawbase()
+  end
+  bloodinthegutter =
+    draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
+end
+
 --Function that updates the heatmap whenver the values change.
 local function updateheatmap()
-  calculate_probs(model,revealed,probabilities)
-  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  updatedata()
   backbuffer:Activate()
-  draw.cards(backbuffer,cardcolors,revealed)
+  drawall()
   backbuffer:Flush()
 end
 
@@ -174,14 +198,16 @@ function iupcanvas:map_cb()
   backbuffer=cd.CreateCanvas(cd.DBUFFER,frontbuffer)
 
   --Give the canvas the rest of its callbacks
-  cancb(iupcanvas,backbuffer,selection,cardcolors,updateheatmap,undobutton)
+  cancb(iupcanvas,backbuffer,
+    selection,cardcolors,
+    updateheatmap,undobutton,
+    function() return probcalcerr end)
 end
 
 function iupcanvas:action()
   backbuffer:Activate()
-  draw.clear(backbuffer,dlgbgcolors)
-  draw.bars(backbuffer)
-  draw.cards(backbuffer,cardcolors,revealed)
+  drawbase()
+  drawall()
   backbuffer:Flush()
 end
 
@@ -210,8 +236,7 @@ iup.Append(layout,undobutton)
 -- Data initialization
 -------------------------------------------------------------------------------
 
-calculate_probs(model,revealed,probabilities)
-generate_colors(probabilities,cardcolors,cd.EncodeColor)
+updatedata()
 
 -------------------------------------------------------------------------------
 -- Program start
@@ -219,12 +244,17 @@ generate_colors(probabilities,cardcolors,cd.EncodeColor)
 
 --Store the main window just because it's good form
 local mainwin = iup.dialog{
+  --use the Voltorb image for the window's icon
   icon=voltorb_icon,
+  --give the window the name of this program
   title="Game Corner",
+  --give the window the menu we created in menu.lua
   menu=menu,
   --since we really have NO support for resizing we just flat out disable it
   resize="no",
+  --start with focus on the leftmost column's sum textbox
   startfocus=textboxes.columns[1].sum;
+  --window contents
   layout}
 --show the main window
 mainwin:show()
