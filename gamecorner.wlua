@@ -159,16 +159,30 @@ local frontbuffer,backbuffer
 
 local function updatedata()
   probcalcerr=calculate_probs(model,revealed,probabilities)
-  if not probcalcerr then
-    generate_colors(probabilities,cardcolors,cd.EncodeColor)
+  generate_colors(probabilities,cardcolors,cd.EncodeColor)
+end
+
+local function drawbase()
+  draw.clear(backbuffer,dlgbgcolors)
+  draw.bars(backbuffer)
+  bloodinthegutter=nil
+end
+
+--tracks if the background needs to be redrawn
+local bloodinthegutter
+local function drawall()
+  if bloodinthegutter then
+    drawbase()
   end
+  bloodinthegutter =
+    draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
 end
 
 --Function that updates the heatmap whenver the values change.
 local function updateheatmap()
   updatedata()
   backbuffer:Activate()
-  draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
+  drawall()
   backbuffer:Flush()
 end
 
@@ -192,9 +206,8 @@ end
 
 function iupcanvas:action()
   backbuffer:Activate()
-  draw.clear(backbuffer,dlgbgcolors)
-  draw.bars(backbuffer)
-  draw.cards(backbuffer,cardcolors,revealed,probcalcerr)
+  drawbase()
+  drawall()
   backbuffer:Flush()
 end
 
@@ -231,12 +244,17 @@ updatedata()
 
 --Store the main window just because it's good form
 local mainwin = iup.dialog{
+  --use the Voltorb image for the window's icon
   icon=voltorb_icon,
+  --give the window the name of this program
   title="Game Corner",
+  --give the window the menu we created in menu.lua
   menu=menu,
   --since we really have NO support for resizing we just flat out disable it
   resize="no",
+  --start with focus on the leftmost column's sum textbox
   startfocus=textboxes.columns[1].sum;
+  --window contents
   layout}
 --show the main window
 mainwin:show()

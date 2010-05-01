@@ -34,6 +34,8 @@ local canheight=(sizes.card+sizes.cardgap)*lines
 
 --The size of a card, for drawing cards.
 local scard = sizes.card
+--The size of a card and gap, for calculating offsets.
+local carddist = scard+sizes.cardgap
 --The size of a third of a card, for drawing subsquares.
 local third = scard/3
 --The height of
@@ -250,20 +252,28 @@ do
   local grey=encodect(colors.grey)
   --Used for edges and subsquares.
   local darkgrey=encodect(colors.darkgrey)
+  --Used for bars and numbers on flipped cards.
+  local black=encodect(colors.black)
   --Used for text.
   local red=cd.EncodeColor(255,0,0)
 
-  function draw.errcard(can,row_index,col_index,cell)
-    local resx, resy = can:Pixel2MM(1,1)
-    local function fontsize(px)
-      return cd.MM2PT * px*resy
+  function draw.errbars(can)
+    local scard=sizes.card+sizes.cardgap
+    local half=sizes.card/2
+    local sixth=sizes.bars/2
+
+    can:Foreground(black)
+
+    for line=1, lines do
+      can:Box(0, canheight-1,
+        canheight+sizes.cardgap-scard*(line)+half-sixth,
+        canheight+sizes.cardgap-scard*(line)+half+sixth-1)
+      can:Box(scard*(line-1)+half-sixth,
+        scard*(line-1)+half+sixth-1,0,canheight-1)
     end
+  end
 
-    can:Font(font,cd.BOLD,fontsize(scard/20))
-    can:MarkType(cd.CIRCLE)
-    can:MarkSize(memosize)
-    can:TextAlignment(cd.CENTER)
-
+  function draw.errcard(can,row,col)
     local left=(scard+sizes.cardgap)*(col-1)
     local top = canheight-(scard+sizes.cardgap)*(row-1)
     local right, bottom= left+scard, top-scard
@@ -272,22 +282,77 @@ do
     can:Box(left, right-1, bottom, top-1)
 
     can:Foreground(darkgrey)
-    for subsq=0,3 do
-      local hoffset=subsq%2==0 and 0 or third*2
-      local voffset=subsq<2 and 0 or third*2
-      can:Box(left+hoffset, right+hoffset-1,
-        bottom+voffset, top+voffset-1)
+    can:Box(left, left+third-1, top-third, top-1)
+    can:Box(right-third, right-1, top-third, top-1)
+    can:Box(left, left+third-1, bottom, bottom+third-1)
+    can:Box(right-third, right-1, bottom, bottom+third-1)
+    can:Box(left+third, right-third-1, bottom+third, top-third-1)
+  end
+
+  local edge=scard/20
+
+  function draw.errflipped(can,row,col,card)
+    local left=(scard+sizes.cardgap)*(col-1)
+    local top = canheight-(scard+sizes.cardgap)*(row-1)
+    local right, bottom= left+scard, top-scard
+
+    can:Foreground(darkgrey)
+    can:Box(left, right-1,
+      bottom, top-1)
+
+    can:Foreground(grey)
+    can:Box(left+edge, right-edge-1,
+      bottom+edge, top-edge-1)
+
+    can:Foreground(black)
+    drawdigit(can,'large',card,
+      left+scard/2,top-scard/2,
+      scard/2)
+  end
+
+  function draw.errmsg(can,row,col,msg)
+    local resx, resy = can:Pixel2MM(1,1)
+    local function fontsize(px)
+      return cd.MM2PT * px*resy
+    end
+
+    can:Foreground(red)
+    can:Font(font,cd.BOLD,fontsize(scard/5))
+    can:TextAlignment(cd.BASE_CENTER)
+
+    if row=="column" then
+      can:TextOrientation(90)
+      can:Text((col-1)*carddist+scard/2,canheight/2,msg)
+    elseif col == "row" then
+      can:TextOrientation(0)
+      can:Text(canheight/2,canheight-(row)*carddist+scard/2,msg)
+    else
+      can:TextOrientation(0)
+      can:Text((col-1)*carddist+scard/2,(row-1)*carddist+scard/2,msg)
     end
   end
-  function draw.errflipped(can,row_index,col_index,cell)
-  end
 end
-function draw.cards(can,cardcolors,flipped,errmsg)
+
+function draw.cards(can,cardcolors,flipped,errmsgs)
+  local bg_needs_to_be_redrawn
+  if errmsgs then
+    bg_needs_to_be_redrawn=true
+    draw.errbars(can)
+  end
+
   for row_index, row in ipairs(cardcolors) do
     for col_index, cell in ipairs(row) do
       local flip = flipped[row_index][col_index]
 
-      if errmsg then
+      if errmsgs then
+        if flip then
+          draw.errflipped(can,row_index,col_index,flip)
+        else
+          draw.errcard(can,row_index, col_index)
+        end
+        for errnum, err in pairs(errmsgs) do
+          draw.errmsg(can,unpack(err))
+        end
       else
         if flip then
           draw.flippedcard(can,row_index,col_index, flip)
@@ -297,6 +362,8 @@ function draw.cards(can,cardcolors,flipped,errmsg)
       end
     end
   end
+
+  return bg_needs_to_be_redrawn
 end
 
 return draw

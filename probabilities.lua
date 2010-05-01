@@ -26,6 +26,9 @@ The probability calculation algorithm.
 -- "lines" is a global representing the number of rows and columns
 -- defined as 5 in the main script.
 
+--For error reporting
+local posstrings={[0]="Voltorb",'1','2','3'}
+
 --The possible combinations for each number for each number of
 --non-voltorb cards.
 local combosets={}
@@ -95,17 +98,35 @@ end
 -- To be clear, this is where we start the implementation-specific stuff for
 -- this algorithm.
 
+--The average probability for each unflipped card in a row/column.
 local lineprobs={rows={},columns={}}
 
+--The distributions of probabilities among possiblities for each row/column.
+local dists={rows={},columns={}}
+
 ---- Functions --------------------------------------------
+
+local function calc_sureness(axis,line)
+  local thisline=lineprobs[axis][line]
+  local sureness=1
+  for num=0,3 do
+    local numsure=math.abs(.25-thisline[num])
+    if thisline[num] < .25 then
+      numsure=numsure/.25
+    else
+      numsure=numsure/.75
+    end
+    sureness=sureness-.25*(1-numsure)
+  end
+  dists[axis][line]=sureness
+end
 
 --Calculate the probabilities for all card in each row and column.
 local function calculate_rcprobs(model, reveals)
 
   --For both rows and columns
-  for _, axis in pairs{"rows","columns"} do
+  for axis, rcprobs in pairs(lineprobs) do
     local data=model[axis]
-    local rcprobs=lineprobs[axis]
 
     --For each row/column
     for line=1, lines do
@@ -114,10 +135,10 @@ local function calculate_rcprobs(model, reveals)
     local function errtable(...)
       local errrow, errcol
       if axis == 'rows' then
-        errrow = lines
+        errrow = line
         errcol = 'row'
       elseif axis == 'columns' then
-        errcol = lines
+        errcol = line
         errrow = 'column'
       end
       return {{errrow,errcol,string.format(...)}}
@@ -154,7 +175,12 @@ local function calculate_rcprobs(model, reveals)
       if open<0 then
         return errtable(
           "Cannot have %i non-zero flipped cards with %i Voltorb",
-          -(open-voltorbcount), voltorbcount)
+          open, voltorbcount)
+      --also this one
+      elseif flipped[0] > data[line].voltorb then
+        return errtable(
+          "%i too many Voltorb flipped",
+          flipped[0]-data[line].voltorb)
 
       elseif open==0 then
         if voltorbcount==0 then
@@ -187,7 +213,20 @@ local function calculate_rcprobs(model, reveals)
         }
         end
       end
+      --calculate this line's distribution
+      calc_sureness(axis,line)
     end
+  end
+end
+
+--Function dictating how much to scale depending on distributions
+local function scaleby(self, other)
+  if self > other then
+    return .5 + .5 * self
+  elseif self < other then
+    return .5 - .5 * other
+  else
+    return .5
   end
 end
 
@@ -266,11 +305,34 @@ return function (
     --for every card,
     for col=1, lines do
       --for every possibility,
+      local errs
       for num=0,3 do
-        --the probability is the average of the row and column's probability
-        probs[row][col][num]=
-          lineprobs.rows[row][num]*.5
-          + lineprobs.columns[col][num]*.5
+        local rowprob = lineprobs.rows[row][num]
+        local colprob = lineprobs.columns[col][num]
+        if rowprob==1 then
+          if colprob==0 then
+            errs=errs or {}
+            errs[#errs+1]=string.format(
+              "Row definite %s\ncolumn has no possibility for it",
+              posstrings[num])
+          else
+            probs[row][col][num]=1
+          end
+        elseif colprob==1 then
+          if rowprob==0 then
+            errs=errs or {}
+            errs[#errs+1]=string.format(
+              "Column definite %s\nrow has no possibility for it",
+              posstrings[num])
+          else
+            probs[row][col][num]=1
+          end
+        else
+          --the probability is the average of the row and column's probability
+          probs[row][col][num]=rowprob*scaleby(dists.rows[row],dists.columns[col])
+            + colprob*scaleby(dists.columns[col],dists.rows[row])
+        end
+        if errs then return {{row,col, table.concat(errs,'\n')}} end
       end
     end
   end

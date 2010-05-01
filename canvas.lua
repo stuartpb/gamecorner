@@ -181,10 +181,10 @@ return function(...)
     end
   end
 
-  function iupcanvas:button_cb(button,pressed,x,y,status)
+  function iupcanvas:button_cb(mousebutton,pressed,x,y,status)
     if not suppress() then
       local lmb_pressed
-      if button==iup.BUTTON1 then
+      if mousebutton==iup.BUTTON1 then
         lmb_pressed = pressed==1
       else
         lmb_pressed = iup.isbutton1(status)
