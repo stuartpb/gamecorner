@@ -36,7 +36,7 @@ return function (layout, model, updateheatmap, defaults)
   --press "tab" - even though I'm overriding that functionality,
   --who's to say what else could use that ordering
 
-  for _, axis in ipairs(axes) do
+  for _, axis in pairs(axes) do
     for line=1, lines do
       iup.Append(layout,labels[axis][line])
       for _, datum in ipairs(datatypes) do

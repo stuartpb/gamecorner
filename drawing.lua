@@ -340,13 +340,13 @@ function draw.cards(can,cardcolors,flipped,errmsgs)
     draw.errbars(can)
   end
 
-  for row_index, row in ipairs(cardcolors) do
-    for col_index, cell in ipairs(row) do
+  for row_index=1, lines do
+    for col_index=1, lines do
       local flip = flipped[row_index][col_index]
 
       if errmsgs then
         if flip then
-          draw.errflipped(can,row_index,col_index,flip)
+          draw.errflipped(can,row_index, col_index,flip)
         else
           draw.errcard(can,row_index, col_index)
         end
@@ -357,7 +357,7 @@ function draw.cards(can,cardcolors,flipped,errmsgs)
         if flip then
           draw.flippedcard(can,row_index,col_index, flip)
         else
-          draw.card(can,row_index, col_index, cell)
+          draw.card(can,row_index, col_index, cardcolors[row_index][col_index])
         end
       end
     end
