@@ -13,7 +13,7 @@ require "cdlua"
 --Sizes are required to know where to draw anything
 local sizes = require "settings.sizes"
 
---Required for drawing the "1", "2", and "3".
+--Required for drawing error messages.
 local fonts = require "settings.fonts"
 
 --Required for the background bars.
@@ -26,7 +26,7 @@ local digits = require "images.digits"
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
 
---The font to write the numbers in.
+--The font to write errors in.
 local font= fonts.drawing
 
 --the height of the canvas, for determining distances from the top.
