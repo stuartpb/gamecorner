@@ -50,11 +50,6 @@ local function encodect(ct)
   return cd.EncodeColor(unpack(ct))
 end
 
---Sets a table of RGB values as a canvas's foreground color.
-local function foregroundct(can,ct)
-  can:Foreground(encodect(ct))
-end
-
 -------------------------------------------------------------------------------
 -- Module definition
 -------------------------------------------------------------------------------
@@ -210,40 +205,45 @@ end
 
 --Function for drawing an individual card.
 function draw.card(can,row,col,card)
+  --Sets a table of RGB values as the canvas's foreground color.
+  local function foregroundct(ct)
+    can:Foreground(encodect(ct))
+  end
+
   can:MarkType(cd.CIRCLE)
   can:MarkSize(memosize)
 
   local left=(scard+sizes.cardgap)*(col-1)
   local top = canheight-(scard+sizes.cardgap)*(row-1)
   local right, bottom= left+scard, top-scard
-  foregroundct(can,card.overall)
+  foregroundct(card.overall)
   can:Box(left, right-1, bottom, top-1)
 
-  foregroundct(can,card.subsquares[0])
+  foregroundct(card.subsquares[0])
   can:Box(left, left+third-1, top-third, top-1)
 
-  foregroundct(can,card.subsquares[1])
+  foregroundct(card.subsquares[1])
   can:Box(right-third, right-1, top-third, top-1)
 
-  foregroundct(can,card.subsquares[2])
+  foregroundct(card.subsquares[2])
   can:Box(left, left+third-1, bottom, bottom+third-1)
 
-  foregroundct(can,card.subsquares[3])
+  foregroundct(card.subsquares[3])
   can:Box(right-third, right-1, bottom, bottom+third-1)
 
-  foregroundct(can,card.subsquares[4])
+  foregroundct(card.subsquares[4])
   can:Box(left+third, right-third-1, bottom+third, top-third-1)
 
-  foregroundct(can,card[0])
+  foregroundct(card[0])
   can:Mark(left+third/2, top-third/2)
 
-  foregroundct(can,card[1])
+  foregroundct(card[1])
   drawdigit(can,'small',1,right-third/2,top-third/2,memosize)
 
-  foregroundct(can,card[2])
+  foregroundct(card[2])
   drawdigit(can,'small',2,left+third/2,bottom+third/2,memosize)
 
-  foregroundct(can,card[3])
+  foregroundct(card[3])
   drawdigit(can,'small',3,right-third/2,bottom+third/2,memosize)
 end
 

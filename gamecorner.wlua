@@ -9,9 +9,9 @@
 -------------------------------------------------------------------------------
 
 --Required for the interface (controls and whatnot).
-require 'iuplua'
+local iup = require 'iuplua'
 --Required for drawing the probability table.
-require 'cdlua'
+local cd = require 'cdlua'
 
 -- The library that allows for the interoperation of the two.
 -- NOTICE! This MUST be included AFTER cdlua or else you will get WEIRD ERRORS
@@ -162,14 +162,15 @@ local function updatedata()
   generate_colors(probabilities,cardcolors,cd.EncodeColor)
 end
 
+--tracks if the background needs to be redrawn
+local bloodinthegutter
+
 local function drawbase()
   draw.clear(backbuffer,dlgbgcolors)
   draw.bars(backbuffer)
   bloodinthegutter=nil
 end
 
---tracks if the background needs to be redrawn
-local bloodinthegutter
 local function drawall()
   if bloodinthegutter then
     drawbase()
@@ -217,11 +218,13 @@ local layout = iup.cbox{
     canvassize -- the width of the canvas
       + sizes.margin*2 -- plus the left and right margin
       + sizes.controls.gap -- plus the gap between the canvas and controls
-      + sizes.controls.width, --plus the width of the controls
-    canvassize
-      + sizes.margin*2
-      + sizes.controls.gap*2
-      + sizes.controls.height*2),
+      + sizes.controls.width, -- plus the width of the controls
+    canvassize -- the height of the canvas
+      + sizes.margin*2 -- plus the top and bottom margin
+      + sizes.controls.gap*2 -- plus the gaps between the canvas, sum,
+                             -- and Voltorb controls
+      + sizes.controls.height*2), --plus the height of the sum and Voltorb
+                                  --controls
   iupcanvas}
 
 -------------------------------------------------------------------------------
