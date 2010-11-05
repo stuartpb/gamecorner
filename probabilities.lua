@@ -36,199 +36,50 @@ local combosets={}
 --Make a table for every possible sum containing the possible sets of cards
 --that could yield that sum.
 for open=1,lines do
-  local sums={}
 
   --Make a table for each possible sum for this number of non-zero cards.
+  local sums={}; combosets[open]=sums
   for sum=open, open*3 do
     sums[sum]={}
   end
 
   --Calculate every possible set with these cards and place them
   --in the table for that sum.
-  for onesend=0,open do
-    for twosend=onesend,open do
+
+  --For every possible number of cards with a 1 on them
+  for onesend=0, open do
+    --For every subsequently possible number of cards with a 2 on them
+    for twosend=onesend, open do
+
+      --running sum of all cards
       local sum=0
-      local set={}
+
+      --start with a zero count for 1, 2, and 3
+      local set={0,0,0}
+
+      --for each card
       for i=1,open do
+
+        --determine the number on this card by the counts in this loop
         local thiscard= i>twosend and 3 or (i>onesend and 2 or 1)
+
+        --add the number on this card to the sum
         sum=sum+thiscard
-        set[i]=thiscard
+
+        --add to the number of this card in this set
+        set[thiscard]=set[thiscard]+1
+
       end
-      local thissum=sums[sum]
-      thissum[#thissum+1]=set
+
+      --add this set to the table for all possible card combinations
+      --for this sum
+      local thissumcombos = sums[sum]
+      thissumcombos[#thissumcombos+1] = set
     end
   end
-
-  combosets[open]=sums
 end
-
---Calculate the exact probability for each card for each sum with
---each number of non-zero cards.
-local cardprobs={}
-for open,sums in pairs(combosets) do
-
-  --The table of sums for this number of non-zero cards.
-  local countprobs={}
-
-  for sum,sets in pairs(sums) do
-
-    --The probability of each card for this sum.
-    local sumprobs={[0]=0,[1]=0,[2]=0,[3]=0}
-
-    --Total all cards that can contribute to this sum.
-    for _,set in pairs(sets) do
-      for _, card in pairs(set) do
-        sumprobs[card]=sumprobs[card]+1
-      end
-    end
-
-    --turn the totals into averages
-    for i=0,3 do
-      sumprobs[i]=sumprobs[i]/(open * #sets)
-    end
-
-    countprobs[sum]=sumprobs
-  end
-
-  cardprobs[open]=countprobs
-end
-
----- Variables --------------------------------------------
-
--- To be clear, this is where we start the implementation-specific stuff for
--- this algorithm.
-
---The average probability for each unflipped card in a row/column.
-local lineprobs={rows={},columns={}}
-
---The distributions of probabilities among possiblities for each row/column.
-local dists={rows={},columns={}}
 
 ---- Functions --------------------------------------------
-
-local function calc_sureness(axis,line)
-  local thisline=lineprobs[axis][line]
-  local sureness=1
-  for num=0,3 do
-    local numsure=math.abs(.25-thisline[num])
-    if thisline[num] < .25 then
-      numsure=numsure/.25
-    else
-      numsure=numsure/.75
-    end
-    sureness=sureness-.25*(1-numsure)
-  end
-  dists[axis][line]=sureness
-end
-
---Calculate the probabilities for all card in each row and column.
-local function calculate_rcprobs(model, reveals)
-
-  --For both rows and columns
-  for axis, rcprobs in pairs(lineprobs) do
-    local data=model[axis]
-
-    --For each row/column
-    for line=1, lines do
-
-    --function for reporting errors for this line
-    local function errtable(...)
-      local errrow, errcol
-      if axis == 'rows' then
-        errrow = line
-        errcol = 'row'
-      elseif axis == 'columns' then
-        errcol = line
-        errrow = 'column'
-      end
-      return {{errrow,errcol,string.format(...)}}
-    end
-
-      local linesum=data[line].sum
-      local voltorbcount=data[line].voltorb
-
-      --The number of cards with a number on them
-      local nonzero=lines-voltorbcount
-      local open=nonzero
-
-      local flipped={[0]=0,[1]=0,[2]=0,[3]=0}
-
-      for i=1, lines do
-        local card
-        if axis=="rows" then
-          card=reveals[line][i]
-        else
-          card=reveals[i][line]
-        end
-        if card then
-          flipped[card]=flipped[card]+1
-          if card==0 then
-            voltorbcount=voltorbcount-1
-          else
-            linesum=linesum-card
-            open=open-1
-          end
-        end
-      end
-
-      --if there were more flipped cards than possible
-      if open<0 then
-        return errtable(
-          "Cannot have %i non-zero flipped cards with %i Voltorb",
-          open, voltorbcount)
-      --also this one
-      elseif flipped[0] > data[line].voltorb then
-        return errtable(
-          "%i too many Voltorb flipped",
-          flipped[0]-data[line].voltorb)
-
-      elseif open==0 then
-        if voltorbcount==0 then
-          --if every card in this line has been flipped,
-          --set this line's probabilities exactly
-          rcprobs[line]={}
-          for i=0,3 do
-            rcprobs[line][i]=flipped[i]/lines
-          end
-        else
-          rcprobs[line]={[0]=1,0,0,0}
-        end
-      else
-        if not cardprobs[open][linesum] then
-          return errtable("%i cards can not add up to %i",
-            open,linesum)
-        else
-        --The probability for each row/column:
-        rcprobs[line]={
-
-          --The probability of a Voltorb is as simple as the number of Voltorb
-          --in the row or column out of the number of cards in a row/column
-          [0]=voltorbcount/lines,
-
-          --The probability of each number is the probability of that number
-          --within the probability of the card being a number at all
-          [1]=cardprobs[open][linesum][1]*(nonzero/lines),
-          [2]=cardprobs[open][linesum][2]*(nonzero/lines),
-          [3]=cardprobs[open][linesum][3]*(nonzero/lines),
-        }
-        end
-      end
-      --calculate this line's distribution
-      calc_sureness(axis,line)
-    end
-  end
-end
-
---Function dictating how much to scale depending on distributions
-local function scaleby(self, other)
-  if self > other then
-    return .5 + .5 * self
-  elseif self < other then
-    return .5 - .5 * other
-  else
-    return .5
-  end
-end
 
 -------------------------------------------------------------------------------
 -- Interface function
@@ -295,45 +146,130 @@ return function (
 
   --Implementation for this algorithm:
 
-  --calculate the probabilities for these rows and columns
-  local calcerr = calculate_rcprobs(model,revealed)
+  local errs
 
-  if calcerr then return calcerr end
+  local function adderr(t)
+    errs = errs or {}
+    errs[#errs+1]=t
+  end
+
+  --Make adjusted row and column counts
+  local adj={}
+  do
+    for axis, t in pairs(model) do
+      adj[axis]={}
+      for i=1,lines do
+        adj[axis][i]={}
+        --initialize the card numbers to 5
+        --(we're counting Voltorbs)
+        adj[axis][i].cards = lines
+        --we're also going to adjust Voltorb,
+        --you know, in case Voltorb are getting revealed
+        --(even though they really shouldn't)
+        adj[axis][i].voltorb = t[i].voltorb
+        adj[axis][i].sum = t[i].sum
+      end
+    end
+    --For every row,
+    for row=1,lines do
+      --for every card,
+      for col=1, lines do
+        --if this card has been revealed
+        if revealed[row][col] then
+          --reduce the row and column adjustments accordingly
+          adj.rows[row].sum=adj.rows[row].sum - revealed[row][col]
+          adj.columns[col].sum=adj.columns[col].sum - revealed[row][col]
+
+          adj.rows[row].cards=adj.rows[row].cards - 1
+          adj.columns[col].cards=adj.columns[col].cards - 1
+
+          if revealed[row][col] == 0 then
+            if adj.rows[row].voltorb <= 0 then
+              adderr{row,"row","Too many Voltorb revealed"}
+            else
+              adj.rows[row].voltorb = adj.rows[row].voltorb - 1
+            end
+            if adj.columns[col].voltorb <= 0 then
+              adderr{"column",col,"Too many Voltorb revealed"}
+            else
+              adj.columns[col].voltorb = adj.columns[col].voltorb - 1
+            end
+          end
+
+          if adj.rows[row].cards < adj.rows[row].voltorb then
+            adderr{row,"row","Too many non-Voltorb revealed"}
+          end
+          if adj.columns[col].cards < adj.columns[col].voltorb then
+            adderr{"column",col,"Too many non-Voltorb revealed"}
+          end
+
+        end
+      end
+    end
+  end
+
+  --get the card counts for each row and column
+  local counts={}
+  for axis,t in pairs(adj) do
+    counts[axis]={}
+    for line=1, lines do
+      local nums = t[line].cards-t[line].voltorb
+      if t[line].cards==0 --all the cards have been revealed
+        or nums<0 --or there are too many Voltorbs
+      then
+        --just skip this case
+      elseif nums==0 then
+        counts[axis][line]={[0]=1,0,0,0}
+      else
+        local sumsets = combosets[nums][t[line].sum]
+        if sumsets then
+          counts[axis][line]={[0]=0,0,0,0}
+          for _,set in pairs(sumsets) do
+            for i = 1, 3 do
+              counts[axis][line][i] = counts[axis][line][i] + set[i]/#sumsets
+            end
+          end
+          counts[axis][line][0] = counts[axis][line][0] + t[line].voltorb
+        else
+          local errmsg =
+            string.format("Can't reach %i with %i cards",t[line].sum,nums)
+          if axis=="rows" then
+            adderr{line,"row",errmsg}
+          elseif axis=="columns" then
+            adderr{"column",line,errmsg}
+          end
+        end
+      end
+    end
+  end
+
 
   --For every row,
   for row=1,lines do
     --for every card,
     for col=1, lines do
-      --for every possibility,
-      local errs
-      for num=0,3 do
-        local rowprob = lineprobs.rows[row][num]
-        local colprob = lineprobs.columns[col][num]
-        if rowprob==1 then
-          if colprob==0 then
-            errs=errs or {}
-            errs[#errs+1]=string.format(
-              "Row definite %s\ncolumn has no possibility for it",
-              posstrings[num])
-          else
-            probs[row][col][num]=1
+      do
+        if counts.rows[row] and counts.columns[col]
+        and not revealed[row][col] then
+          local set={[0]=0,0,0,0}
+          local sum=0
+          for i=0,3 do
+            local odds=math.sqrt(counts.rows[row][i])
+              *math.sqrt(counts.columns[col][i])
+            set[i]=odds
+            sum=sum+odds
           end
-        elseif colprob==1 then
-          if rowprob==0 then
-            errs=errs or {}
-            errs[#errs+1]=string.format(
-              "Column definite %s\nrow has no possibility for it",
-              posstrings[num])
+          if sum==0 then
+            adderr{row,col,"No possible card"}
           else
-            probs[row][col][num]=1
+            for i=0,3 do
+              probs[row][col][i]=set[i]/sum
+            end
           end
-        else
-          --the probability is the average of the row and column's probability
-          probs[row][col][num]=rowprob*scaleby(dists.rows[row],dists.columns[col])
-            + colprob*scaleby(dists.columns[col],dists.rows[row])
         end
-        if errs then return {{row,col, table.concat(errs,'\n')}} end
       end
     end
   end
+
+  return errs
 end

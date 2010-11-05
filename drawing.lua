@@ -322,13 +322,22 @@ do
 
     if row=="column" then
       can:TextOrientation(90)
-      can:Text((col-1)*carddist+scard/2,canheight/2,msg)
+      can:Text(
+        (col-1)*carddist+scard/2,
+        canheight/2,
+        msg)
     elseif col == "row" then
       can:TextOrientation(0)
-      can:Text(canheight/2,canheight-(row)*carddist+scard/2,msg)
+      can:Text(
+        canheight/2,
+        canheight-(row)*carddist+scard/2,
+        msg)
     else
       can:TextOrientation(0)
-      can:Text((col-1)*carddist+scard/2,(row-1)*carddist+scard/2,msg)
+      can:Text(
+        (col-1)*carddist+scard/2,
+        canheight-(row)*carddist+scard/2,
+        msg)
     end
   end
 end
