@@ -155,121 +155,162 @@ return function (
 
   --Make adjusted row and column counts
   local adj={}
-  do
-    for axis, t in pairs(model) do
-      adj[axis]={}
-      for i=1,lines do
-        adj[axis][i]={}
-        --initialize the card numbers to 5
-        --(we're counting Voltorbs)
-        adj[axis][i].cards = lines
-        --we're also going to adjust Voltorb,
-        --you know, in case Voltorb are getting revealed
-        --(even though they really shouldn't)
-        adj[axis][i].voltorb = t[i].voltorb
-        adj[axis][i].sum = t[i].sum
+  for axis, t in pairs(model) do
+    adj[axis]={}
+    for i=1,lines do
+      adj[axis][i]={}
+      --initialize the card numbers to 5
+      --(we're counting Voltorbs)
+      adj[axis][i].cards = lines
+      --we're also going to adjust Voltorb,
+      --you know, in case Voltorb are getting revealed
+      --(even though they really shouldn't)
+      adj[axis][i].voltorb = t[i].voltorb
+      adj[axis][i].sum = t[i].sum
+    end
+  end
+
+  local definite={}
+  local flips={}
+
+  --For every row,
+  for row=1,lines do
+    definite[row]={}
+    --for every card,
+    for col=1, lines do
+      --if this card has been revealed
+      if revealed[row][col] then
+        definite[row][col]=revealed[row][col]
+        --add it to the definite numbers
+        flips[#flips+1]={row=row,col=col,val=revealed[row][col]}
       end
     end
+  end
+
+  --recursive evaluation for all definite cards
+  function calc_with_defs(defs)
+    for i=1, #defs do
+      local row=defs[i].row
+      local col=defs[i].col
+      local val=defs[i].val
+
+      definite[row][col]=val
+
+      --reduce the row and column adjustments accordingly
+      adj.rows[row].sum=adj.rows[row].sum - val
+      adj.columns[col].sum=adj.columns[col].sum - val
+
+      adj.rows[row].cards=adj.rows[row].cards - 1
+      adj.columns[col].cards=adj.columns[col].cards - 1
+
+      if val == 0 then
+        if adj.rows[row].voltorb <= 0 then
+          adderr{row,"row","Too many Voltorb revealed"}
+        else
+          adj.rows[row].voltorb = adj.rows[row].voltorb - 1
+        end
+        if adj.columns[col].voltorb <= 0 then
+          adderr{"column",col,"Too many Voltorb revealed"}
+        else
+          adj.columns[col].voltorb = adj.columns[col].voltorb - 1
+        end
+      end
+
+      if adj.rows[row].cards < adj.rows[row].voltorb then
+        adderr{row,"row","Too many non-Voltorb revealed"}
+      end
+      if adj.columns[col].cards < adj.columns[col].voltorb then
+        adderr{"column",col,"Too many non-Voltorb revealed"}
+      end
+    end
+
+    --get the card counts for each row and column
+    local counts={}
+    for axis,t in pairs(adj) do
+      counts[axis]={}
+      for line=1, lines do
+        local nums = t[line].cards-t[line].voltorb
+        if t[line].cards==0 --all the cards have been revealed
+          or nums<0 --or there are too many Voltorbs
+        then
+          --just skip this case
+        elseif nums==0 then
+          counts[axis][line]={[0]=1,0,0,0}
+        else
+          local sumsets = combosets[nums][t[line].sum]
+          if sumsets then
+            counts[axis][line]={[0]=0,0,0,0}
+            for _,set in pairs(sumsets) do
+              for i = 1, 3 do
+                counts[axis][line][i] = counts[axis][line][i] + set[i]/#sumsets
+              end
+            end
+            counts[axis][line][0] = counts[axis][line][0] + t[line].voltorb
+          else
+            local errmsg =
+              string.format("Can't reach %i with %i cards",t[line].sum,nums)
+            if axis=="rows" then
+              adderr{line,"row",errmsg}
+            elseif axis=="columns" then
+              adderr{"column",line,errmsg}
+            end
+          end
+        end
+      end
+    end
+
+
+    local discoveries
+
+    local function discover(row,col,val)
+      discoveries= discoveries or {}
+      discoveries[#discoveries+1]={row=row,col=col,val=val}
+    end
+
     --For every row,
     for row=1,lines do
       --for every card,
       for col=1, lines do
-        --if this card has been revealed
-        if revealed[row][col] then
-          --reduce the row and column adjustments accordingly
-          adj.rows[row].sum=adj.rows[row].sum - revealed[row][col]
-          adj.columns[col].sum=adj.columns[col].sum - revealed[row][col]
-
-          adj.rows[row].cards=adj.rows[row].cards - 1
-          adj.columns[col].cards=adj.columns[col].cards - 1
-
-          if revealed[row][col] == 0 then
-            if adj.rows[row].voltorb <= 0 then
-              adderr{row,"row","Too many Voltorb revealed"}
-            else
-              adj.rows[row].voltorb = adj.rows[row].voltorb - 1
-            end
-            if adj.columns[col].voltorb <= 0 then
-              adderr{"column",col,"Too many Voltorb revealed"}
-            else
-              adj.columns[col].voltorb = adj.columns[col].voltorb - 1
-            end
-          end
-
-          if adj.rows[row].cards < adj.rows[row].voltorb then
-            adderr{row,"row","Too many non-Voltorb revealed"}
-          end
-          if adj.columns[col].cards < adj.columns[col].voltorb then
-            adderr{"column",col,"Too many non-Voltorb revealed"}
-          end
-
-        end
-      end
-    end
-  end
-
-  --get the card counts for each row and column
-  local counts={}
-  for axis,t in pairs(adj) do
-    counts[axis]={}
-    for line=1, lines do
-      local nums = t[line].cards-t[line].voltorb
-      if t[line].cards==0 --all the cards have been revealed
-        or nums<0 --or there are too many Voltorbs
-      then
-        --just skip this case
-      elseif nums==0 then
-        counts[axis][line]={[0]=1,0,0,0}
-      else
-        local sumsets = combosets[nums][t[line].sum]
-        if sumsets then
-          counts[axis][line]={[0]=0,0,0,0}
-          for _,set in pairs(sumsets) do
-            for i = 1, 3 do
-              counts[axis][line][i] = counts[axis][line][i] + set[i]/#sumsets
-            end
-          end
-          counts[axis][line][0] = counts[axis][line][0] + t[line].voltorb
-        else
-          local errmsg =
-            string.format("Can't reach %i with %i cards",t[line].sum,nums)
-          if axis=="rows" then
-            adderr{line,"row",errmsg}
-          elseif axis=="columns" then
-            adderr{"column",line,errmsg}
-          end
-        end
-      end
-    end
-  end
-
-
-  --For every row,
-  for row=1,lines do
-    --for every card,
-    for col=1, lines do
-      do
-        if counts.rows[row] and counts.columns[col]
-        and not revealed[row][col] then
-          local set={[0]=0,0,0,0}
-          local sum=0
-          for i=0,3 do
-            local odds=math.sqrt(counts.rows[row][i])
-              *math.sqrt(counts.columns[col][i])
-            set[i]=odds
-            sum=sum+odds
-          end
-          if sum==0 then
-            adderr{row,col,"No possible card"}
-          else
+        do
+          if definite[row][col] then
+            local certainty=definite[row][col]
             for i=0,3 do
-              probs[row][col][i]=set[i]/sum
+              probs[row][col][i] = i==certainty and 1 or 0
+            end
+          elseif counts.rows[row] and counts.columns[col] then
+            local set={[0]=0,0,0,0}
+            local sum=0
+            local shonuff
+            for i=0,3 do
+              local odds=math.sqrt(counts.rows[row][i])
+                *math.sqrt(counts.columns[col][i])
+
+              --if this value is possible
+              if odds~=0 then
+                --save the first value added
+                if sum==0 then shonuff=i
+                --if a value has already been added, we're not certain
+                else shonuff=false end
+              end
+              set[i]=odds
+              sum=sum+odds
+            end
+            if sum==0 then
+              adderr{row,col,"No possible card"}
+            else
+              for i=0,3 do
+                probs[row][col][i]=set[i]/sum
+              end
+              if shonuff then discover(row,col,shonuff) end
             end
           end
         end
       end
     end
+
+    if discoveries then return calc_with_defs(discoveries)
+    else return errs end
   end
 
-  return errs
+  return calc_with_defs(flips)
 end

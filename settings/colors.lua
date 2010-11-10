@@ -1,6 +1,7 @@
 --Defines various colors as used in the games.
 --The colors for each card by probability are defined by the routines
---in coloring.lua an
+--in coloring.lua - these are used by drawing.lua for drawing elements
+--such as the background and flipped cards.
 
 return {
   --The colors for the lines and controls.

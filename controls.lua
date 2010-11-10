@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 
 --This module uses the Append function directly from IUPLua.
-require "iuplua"
+local iup = require "iuplua"
 
 -------------------------------------------------------------------------------
 -- Sub-modules
@@ -17,14 +17,14 @@ local make_callbacks = require "controls.callbacks"
 -- Main function
 -------------------------------------------------------------------------------
 
-return function (layout, model, updateheatmap, defaults)
+return function (layout, model, updateheatmap)
   --The textboxes. Used by controls and layout.
   local textboxes={rows={},columns={}}
   --The labels. Not used after layout.
   local labels={rows={},columns={}}
 
   --Construct controls inside of these tables
-  construct_controls(textboxes,labels,defaults)
+  construct_controls(textboxes,labels,model)
   --Add callbacks to these controls
   make_callbacks(textboxes,model,updateheatmap)
 
@@ -36,10 +36,12 @@ return function (layout, model, updateheatmap, defaults)
   --press "tab" - even though I'm overriding that functionality,
   --who's to say what else could use that ordering
 
-  for _, axis in pairs(axes) do
+  for i_axis=1,2 do
+    local axis=axes[i_axis]
     for line=1, lines do
       iup.Append(layout,labels[axis][line])
-      for _, datum in ipairs(datatypes) do
+      for i_datum=1,2 do
+        local datum=datatypes[i_datum]
         iup.Append(layout,textboxes[axis][line][datum])
       end
     end

@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 
 --This module uses constructors directly from IUPLua.
-require "iuplua"
+local iup = require "iuplua"
 
 -------------------------------------------------------------------------------
 -- Game Corner modules
@@ -132,7 +132,7 @@ end
 --the "rows" and "columns" indices in the passed tables.
 --Sum and Voltorb textboxes are initialized with the default values
 --specified in the third table.
-return function (textboxes,labels,defaults)
+return function (textboxes,labels,model)
   --For both rows and columns
   for _, axis in pairs{"rows","columns"} do
     --For each line
@@ -140,7 +140,7 @@ return function (textboxes,labels,defaults)
       --Create the table to store this line's textboxes in
       local lineboxes={}
       --Construct this line's labels and textboxes.
-      construct_line_controls(axis,line,lineboxes,labels[axis],defaults)
+      construct_line_controls(axis,line,lineboxes,labels[axis],model[axis][line])
       --Store this line's controls in the greater table
       textboxes[axis][line]=lineboxes
     end

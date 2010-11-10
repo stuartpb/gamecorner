@@ -1,3 +1,7 @@
+--This file specifies an IUPImage of a Voltorb, as seen in the games.
+
+local iup = require "iuplua"
+
 return iup.image{
     width = 16,
     height = 16,

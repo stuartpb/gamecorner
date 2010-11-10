@@ -82,7 +82,7 @@ local dlgbgcolors={
     "^(%d+) (%d+) (%d+)$")}
 
 --convert them to numbers
-for _, each in pairs(dlgbgcolors) do each=tonumber(each) end
+for i, each in pairs(dlgbgcolors) do dlgbgcolors[i]=tonumber(each) end
 
 -------------------------------------------------------------------------------
 -- Central table construction
@@ -90,6 +90,7 @@ for _, each in pairs(dlgbgcolors) do each=tonumber(each) end
 
 --Table for data for row and column sums and Voltorb counts.
 local model={rows={},columns={}}
+
 --initialize model data
 for line=1, lines do
   for axisname, axis in pairs(model) do

@@ -1,6 +1,6 @@
 return {
   small={
-    [0]={
+    [0]={--should never be used as a true circle is drawn instead
       {0,3,3,3,0},
       {3,3,3,3,3},
       {3,3,3,3,3},
@@ -77,7 +77,7 @@ return {
       {2,3,3,3,3,3,3,2},
       {1,2,3,3,3,3,2,1},
       {0,1,2,2,2,2,1,0},
-    },
+    },--past here this is just for completeness's sake
     [4]={
       {1,2,2,1,0,0,0,0},
       {2,3,3,2,2,2,1,0},

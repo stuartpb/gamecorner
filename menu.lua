@@ -3,7 +3,7 @@
 -------------------------------------------------------------------------------
 
 --This module uses menu constructors directly from IUPLua.
-require "iuplua"
+local iup = require "iuplua"
 
 -------------------------------------------------------------------------------
 -- Mudule functionality
