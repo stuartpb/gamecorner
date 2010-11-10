@@ -25,6 +25,13 @@ local traversal = require "controls.traversal"
 local inter = require "controls.relations"
 --Used to synchroniza values from the model.
 local syncing = require "controls.synchronization"
+-------------------------------------------------------------------------------
+-- Callback creation
+-------------------------------------------------------------------------------
+
+--The number of rows and columns.
+--Used to set each textbox's callbacks.
+local lines = 5
 
 -------------------------------------------------------------------------------
 -- Callback creation

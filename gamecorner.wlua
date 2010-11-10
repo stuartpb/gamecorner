@@ -22,11 +22,6 @@ require 'iupluacd'
 -- Game Corner modules
 -------------------------------------------------------------------------------
 
---Basically everything hinges on the number of lines on a Voltorb Flip board,
---so I'm just making it a global before I require them rather than make
---every single module explicitly require it or define it
-lines=5
-
 --If we've got the filename the script was run with
 if arg and arg[0] then
   --find the path to this file, if there is one
@@ -68,6 +63,9 @@ local makebutton= require "flipping.undobutton"
 -------------------------------------------------------------------------------
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
+
+--The number of rows and columns.
+local lines = 5
 
 --Used for constructing the canvas and layout
 local canvassize=(sizes.card+sizes.cardgap)*lines

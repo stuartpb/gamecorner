@@ -26,6 +26,9 @@ local digits = require "images.digits"
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
 
+--The number of rows and columns.
+local lines = 5
+
 --The font to write errors in.
 local font= fonts.drawing
 

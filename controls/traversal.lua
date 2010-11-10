@@ -1,3 +1,9 @@
+--The number of rows and columns.
+local lines = 5
+
+--Returns a table of functions that return which
+--textboxes to switch focus to for advancing (tab)
+--and retracting (shift+tab).
 return function(position, thisaxis, otheraxis)
   local thisline=thisaxis[position]
 

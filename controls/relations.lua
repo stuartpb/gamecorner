@@ -2,6 +2,10 @@
 --sums and Voltorb counts.
 local inter={}
 
+--The number of rows and columns.
+--Used for calculating appropriate values.
+local lines = 5
+
 --Creates functions to constrain the other value on a line
 --so that it is valid with a new value for the other datum.
 --Requires the model (so it can be updated) and the functions

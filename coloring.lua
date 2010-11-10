@@ -24,8 +24,8 @@ The card coloring algorithm.
 
 ---- Constants --------------------------------------------
 
--- "lines" is a global representing the number of rows and columns
--- defined as 5 in the main script.
+--The number of rows and columns.
+local lines = 5
 
 ---- Functions --------------------------------------------
 

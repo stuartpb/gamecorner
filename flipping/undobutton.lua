@@ -7,8 +7,11 @@
 local sizes = require "settings.sizes"
 
 -------------------------------------------------------------------------------
--- oh hey it's this guy again
+-- Constant value definitions
 -------------------------------------------------------------------------------
+
+--The number of rows and columns.
+local lines = 5
 
 --the height of the canvas, for determining distances from the top.
 local canvassize=(sizes.card+sizes.cardgap)*lines

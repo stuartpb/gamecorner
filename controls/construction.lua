@@ -22,6 +22,9 @@ local voltorb = require "images.voltorb"
 -- "Constant" value definitions
 -------------------------------------------------------------------------------
 
+--The number of rows and columns.
+local lines = 5
+
 --Gets used for stuff like where to position the column controls
 --(below the bottom of the canvas)
 local canvassize=(sizes.card+sizes.cardgap)*lines

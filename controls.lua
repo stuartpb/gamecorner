@@ -9,9 +9,18 @@ local iup = require "iuplua"
 -- Sub-modules
 -------------------------------------------------------------------------------
 
+--Function that constructs controls and stores them in provided tables.
 local construct_controls = require "controls.construction"
---Function that gives all controls their callbacks.
+--Function that gives all controls in provided tables their callbacks.
 local make_callbacks = require "controls.callbacks"
+
+-------------------------------------------------------------------------------
+-- Constant value definitions
+-------------------------------------------------------------------------------
+
+--The number of rows and columns.
+--Used to append each textbox into the main
+local lines = 5
 
 -------------------------------------------------------------------------------
 -- Main function

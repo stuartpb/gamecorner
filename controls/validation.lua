@@ -1,3 +1,7 @@
+--The number of rows and columns.
+--Used to determine maximums.
+local lines = 5
+
 --File for confirming that values are within the legal range.
 local legal_value={}
 
